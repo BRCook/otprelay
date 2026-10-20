@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# OpenRC service for otprelay (Alpine). Install to /etc/init.d/otprelay
+# and the matching otprelay.confd to /etc/conf.d/otprelay.
+
+name="otprelay"
+description="End-to-end-encrypted OTP relay"
+command="/usr/bin/python3"
+command_args="${OTPRELAY_DIR:-/opt/otprelay}/server/otprelay.py serve"
+command_user="otprelay:otprelay"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/otprelay.log"
+error_log="/var/log/otprelay.log"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --file --owner otprelay:otprelay --mode 0640 /var/log/otprelay.log
+    checkpath --directory --owner otprelay:otprelay --mode 0700 /var/lib/otprelay
+}

@@ -1,0 +1,17 @@
+# Configuration for otprelay. Installed as /etc/conf.d/otprelay.
+# Variables must be exported to reach the server process.
+
+# Address and port to listen on. Behind a reverse proxy, the proxy
+# points at this. Use 127.0.0.1 if the proxy runs on the same machine.
+export OTPRELAY_HOST=0.0.0.0
+export OTPRELAY_PORT=8787
+
+# Database location (the directory must be writable by the otprelay user).
+export OTPRELAY_DB=/var/lib/otprelay/otprelay.db
+
+# Optional: serve TLS directly (only if no reverse proxy handles it).
+# Both files must be readable by the otprelay user.
+#export OTPRELAY_TLS_CERT=/etc/otprelay/fullchain.pem
+#export OTPRELAY_TLS_KEY=/etc/otprelay/privkey.pem
+
+export PYTHONUNBUFFERED=1

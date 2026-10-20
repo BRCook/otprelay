@@ -218,3 +218,36 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# --- otprelay additions ---
+
+# Relay database (never commit)
+*.db
+*.db-wal
+*.db-shm
+
+# JetBrains IDEs (PyCharm, IntelliJ IDEA, Android Studio)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Gradle / Kotlin (Android)
+.gradle/
+.kotlin/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Android build outputs and signing keys (never commit keys)
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# OS clutter
+.DS_Store
+Thumbs.db

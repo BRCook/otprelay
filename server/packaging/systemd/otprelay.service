@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# systemd service for otprelay (Debian and similar).
+# Install to /etc/systemd/system/otprelay.service and copy
+# otprelay.env.example to /etc/default/otprelay.
+
+[Unit]
+Description=End-to-end-encrypted OTP relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=otprelay
+Group=otprelay
+EnvironmentFile=-/etc/default/otprelay
+ExecStart=/usr/bin/python3 /opt/otprelay/server/otprelay.py serve
+Restart=on-failure
+RestartSec=5
+StateDirectory=otprelay
+StateDirectoryMode=0700
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

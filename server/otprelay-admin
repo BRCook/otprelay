@@ -1,0 +1,14 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Run otprelay admin commands as the service user, so the database files
+# keep the right owner. Usage: otprelay-admin <command> [args]
+#   e.g. otprelay-admin invite alice
+set -e
+if [ -f /etc/conf.d/otprelay ]; then . /etc/conf.d/otprelay; fi
+if [ -f /etc/default/otprelay ]; then set -a; . /etc/default/otprelay; set +a; fi
+SCRIPT="$(dirname "$(readlink -f "$0")")/otprelay.py"
+if [ "$(id -u)" = "0" ]; then
+    exec su -s /bin/sh otprelay -c 'exec python3 "$0" "$@"' "$SCRIPT" "$@"
+else
+    exec python3 "$SCRIPT" "$@"
+fi
