@@ -111,6 +111,10 @@ class Connection(QObject):
         self.ws.open(request)
 
     def _ping(self):
+        # A text message, not just a protocol ping: reverse proxies often count
+        # only real data frames as activity and close an otherwise idle
+        # connection. The relay answers with {"type": "pong"}.
+        self.ws.sendTextMessage(json.dumps({"type": "ping"}))
         self.ws.ping()
         self.pong_deadline.start()
 
@@ -144,7 +148,12 @@ class Connection(QObject):
             msg = json.loads(text)
         except ValueError:
             return
-        if not isinstance(msg, dict) or msg.get("type") != "code":
+        if not isinstance(msg, dict):
+            return
+        if msg.get("type") == "pong":
+            self.pong_deadline.stop()
+            return
+        if msg.get("type") != "code":
             return
         msg_id = str(msg.get("id", ""))
         now = time.time()
