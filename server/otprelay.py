@@ -228,7 +228,9 @@ class Relay:
         data = await read_json(request)
         secret_hash = token_hash(str(data.get("pairing_secret", "")))
         row = self.db.execute(
-            "SELECT receiver_id FROM pairings WHERE secret_hash = ? AND expires > ?",
+            "SELECT p.receiver_id, s.name AS source_name FROM pairings p "
+            "JOIN receivers r ON r.id = p.receiver_id JOIN sources s ON s.id = r.source_id "
+            "WHERE p.secret_hash = ? AND p.expires > ?",
             (secret_hash, now())).fetchone()
         if not row:
             fail(web.HTTPNotFound, "not paired yet")
@@ -237,7 +239,8 @@ class Relay:
             "UPDATE receivers SET token_hash = ? WHERE id = ?", (token_hash(token), row["receiver_id"]))
         self.db.execute("DELETE FROM pairings WHERE secret_hash = ?", (secret_hash,))
         log(f"receiver {row['receiver_id']} claimed its pairing")
-        return web.json_response({"receiver_id": row["receiver_id"], "receiver_token": token})
+        return web.json_response({"receiver_id": row["receiver_id"], "receiver_token": token,
+                                  "source_name": row["source_name"]})
 
     async def remove_self(self, request):
         receiver = self.receiver(request)

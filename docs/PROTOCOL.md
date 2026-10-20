@@ -134,7 +134,9 @@ The receiver polls this (every 2 seconds is reasonable) after showing its QR cod
 
 Request: `{"pairing_secret": "<s>"}`
 
-Response: `{"receiver_id": "...", "receiver_token": "..."}`
+Response: `{"receiver_id": "...", "receiver_token": "...", "source_name": "Galaxy S24"}`
+
+`source_name` is the name the source registered with, so the receiver can show which phone it is paired with. It is display-only: it comes from the relay rather than from the source itself, so it carries no authority and must not be presented as verified.
 
 Errors: `404` until the source has registered the receiver. A secret can be claimed only once.
 
