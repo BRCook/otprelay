@@ -27,6 +27,12 @@ PORT = int(os.environ.get("OTPRELAY_PORT", "8787"))
 TLS_CERT = os.environ.get("OTPRELAY_TLS_CERT")
 TLS_KEY = os.environ.get("OTPRELAY_TLS_KEY")
 
+RATE_LIMIT = int(os.environ.get("OTPRELAY_RATE_LIMIT", "20"))     # attempts per window
+RATE_WINDOW = int(os.environ.get("OTPRELAY_RATE_WINDOW", "300"))  # seconds
+# Only trust X-Forwarded-For when a reverse proxy sets it; otherwise anyone
+# could forge a header and dodge the limit.
+TRUST_PROXY = os.environ.get("OTPRELAY_TRUST_PROXY", "").lower() in ("1", "true", "yes")
+
 MESSAGE_TTL = 120      # seconds a code waits for an offline receiver
 PAIRING_TTL = 600      # seconds a desktop has to claim its pairing
 INVITE_TTL = 86400     # seconds an invite stays valid
@@ -121,8 +127,34 @@ async def read_json(request):
 class Relay:
     def __init__(self, db):
         self.db = db
+        self.attempts = {}  # (bucket, client) -> [timestamps]
         self.sockets = {}  # receiver_id -> WebSocketResponse
         self.queues = {}   # receiver_id -> {msg_id: (expires, payload)}
+
+    # --- rate limiting ------------------------------------------------------
+
+    def client(self, request):
+        if TRUST_PROXY:
+            forwarded = request.headers.get("X-Forwarded-For", "")
+            if forwarded:
+                # The right-most entry is the one this proxy saw.
+                return forwarded.split(",")[-1].strip()
+        peer = request.transport.get_extra_info("peername") if request.transport else None
+        return peer[0] if peer else "unknown"
+
+    def limit(self, request, bucket):
+        """Throttle the endpoints anyone can reach without a token."""
+        key = (bucket, self.client(request))
+        t = now()
+        hits = [h for h in self.attempts.get(key, []) if t - h < RATE_WINDOW]
+        if len(hits) >= RATE_LIMIT:
+            self.attempts[key] = hits
+            raise web.HTTPTooManyRequests(
+                text=json.dumps({"error": "too many attempts; try again later"}),
+                content_type="application/json",
+                headers={"Retry-After": str(RATE_WINDOW)})
+        hits.append(t)
+        self.attempts[key] = hits
 
     # --- authentication -----------------------------------------------------
 
@@ -158,6 +190,7 @@ class Relay:
         return web.Response(text="ok\n")
 
     async def register(self, request):
+        self.limit(request, "register")
         data = await read_json(request)
         invite_hash = token_hash(normalize_invite(data.get("invite", "")))
         row = self.db.execute(
@@ -225,6 +258,7 @@ class Relay:
         return web.json_response({"ok": True})
 
     async def claim(self, request):
+        self.limit(request, "claim")
         data = await read_json(request)
         secret_hash = token_hash(str(data.get("pairing_secret", "")))
         row = self.db.execute(
@@ -352,6 +386,12 @@ class Relay:
                 for receiver_id in list(self.sockets):
                     if receiver_id not in live:
                         await self.disconnect(receiver_id, "unpaired")
+                for key in list(self.attempts):
+                    fresh = [h for h in self.attempts[key] if t - h < RATE_WINDOW]
+                    if fresh:
+                        self.attempts[key] = fresh
+                    else:
+                        del self.attempts[key]
                 for receiver_id in list(self.queues):
                     fresh = {k: v for k, v in self.queues[receiver_id].items() if v[0] > t}
                     if fresh and receiver_id in live:

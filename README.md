@@ -24,17 +24,17 @@ Forward one-time codes from your Android phone to your desktop, end-to-end encry
 
 * **Source** (Android app, Kotlin): detects codes in notifications, encrypts them separately for each paired receiver, and sends them to the relay.
 * **Relay** (Python): routes ciphertext. It stores only hashes of tokens, and forgets undelivered messages after two minutes.
-* **Receiver** (desktop client for Linux, later Windows): decrypts codes, copies them to the clipboard, and shows a notification. Pairs by showing a QR code for the source to scan.
+* **Receiver** (desktop tray app for Linux, later Windows): decrypts codes, copies them to the clipboard, and shows a notification. Pairs by showing a QR code for the source to scan. See [receiver/README.md](receiver/README.md).
 
 The full API and encryption scheme are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Status
 
-| Component          | State   |
-|--------------------|---------|
-| Relay              | Working |
-| Receiver (desktop) | Planned |
-| Source (Android)   | Planned |
+| Component          | State            |
+|--------------------|------------------|
+| Relay              | Working          |
+| Receiver (desktop) | Working on Linux |
+| Source (Android)   | Planned          |
 
 ## Security model
 
@@ -90,10 +90,15 @@ Set in `/etc/conf.d/otprelay` (Alpine) or `/etc/default/otprelay` (Debian):
 | `OTPRELAY_PORT`                          | `8787`                          | Listen port        |
 | `OTPRELAY_DB`                            | `/var/lib/otprelay/otprelay.db` | SQLite database    |
 | `OTPRELAY_TLS_CERT` / `OTPRELAY_TLS_KEY` | unset                           | Serve TLS directly |
+| `OTPRELAY_RATE_LIMIT`                    | `20`                            | Attempts per window on the endpoints that need no token (`/api/register`, `/api/pair/claim`) |
+| `OTPRELAY_RATE_WINDOW`                   | `300`                           | Length of that window, in seconds |
+| `OTPRELAY_TRUST_PROXY`                   | unset                           | Count rate limits per real client IP from `X-Forwarded-For`. Only set this when a reverse proxy sets that header, or the limit can be dodged with a forged one |
 
 ### Reverse proxy
 
-Point the proxy at `http://<relay-ip>:8787`. It must pass WebSocket upgrades through for `/api/ws`. No other special configuration is needed.
+Point the proxy at `http://<relay-ip>:8787`. It must pass the request headers through for `/api/ws`, since the WebSocket handshake is carried in them.
+
+Receivers send an application-level ping every 30 seconds, so a proxy that only counts data frames as activity will not treat an idle connection as dead. Set `OTPRELAY_TRUST_PROXY=1` so rate limits count the real client rather than the proxy.
 
 ### Updating
 
@@ -116,6 +121,10 @@ otprelay-admin deluser <user>        # remove a user and everything they own
 ```
 
 One relay can serve multiple users. Their phones (sources) redeem the invite, and their desktops (receivers) pair with that source, so nobody can receive anyone else's codes.
+
+## Testing without a phone
+
+`tools/dev-source.py` implements the source side of the protocol in Python, so you can exercise a relay and a receiver from a terminal before the Android app exists. See [receiver/README.md](receiver/README.md#testing-without-the-phone-app).
 
 ## License
 
