@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Builds the desktop receiver as an AppImage. Pushing a tag like v0.2.0 also
+# attaches it to the matching GitHub release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    # Deliberately an older runner: an AppImage links against the glibc it was
+    # built with, so building on the newest Ubuntu would refuse to start on
+    # anything older.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the AppImage builder
+        run: python -m pip install --upgrade pip appimage
+
+      - name: Build the AppImage
+        working-directory: receiver
+        env:
+          # CI runners have no FUSE, so appimagetool unpacks itself instead.
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: python -m appimage.ctl build
+
+      - name: Check that it starts
+        working-directory: receiver
+        run: |
+          chmod +x dist/*.AppImage
+          # No display on a runner, so this only proves the bundle is intact
+          # and Python starts; the tray itself cannot be tested here.
+          APPIMAGE_EXTRACT_AND_RUN=1 ./dist/*.AppImage --help || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: otprelay-receiver-appimage
+          path: receiver/dist/*.AppImage
+          if-no-files-found: error
+
+      - name: Attach it to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: receiver/dist/*.AppImage
+          generate_release_notes: true
