@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later
+     otprelay's icon: a key, drawn on Android's 108x108 adaptive-icon grid so the
+     same geometry serves every platform. Everything sits inside the central
+     72x72 safe zone (x and y from 18 to 90), which is all a round or squircle
+     launcher mask is guaranteed to show. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <rect width="108" height="108" fill="#1F2937"/>
+  <g fill="#F3F4F6">
+    <!-- Bow of the key: a ring, drawn as two circles with the inner one cut out. -->
+    <path fill-rule="evenodd" d="M18,52 A18,18 0 1,1 54,52 A18,18 0 1,1 18,52 Z
+                                 M28,52 A8,8 0 1,0 44,52 A8,8 0 1,0 28,52 Z"/>
+    <!-- Shaft and two teeth. -->
+    <path d="M46,46 H88 V58 H46 Z
+             M64,58 H74 V74 H64 Z
+             M79,58 H88 V69 H79 Z"/>
+  </g>
+</svg>

@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Pictures drawn at runtime, so the app ships no image files."""
 from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
+from PySide6.QtGui import (QColor, QGuiApplication, QIcon, QPainter, QPainterPath,
+                           QPixmap)
 
 STATUS_COLORS = {
     "connected": "#2ecc71",
@@ -21,34 +22,40 @@ def _key_color() -> QColor:
     return QColor("#dddddd")
 
 
+def _key_path() -> QPainterPath:
+    """The key from assets/icon.svg, on the same 108x108 grid."""
+    path = QPainterPath()
+    path.setFillRule(Qt.FillRule.OddEvenFill)
+    path.addEllipse(QRectF(18, 34, 36, 36))   # bow, outer edge
+    path.addEllipse(QRectF(28, 44, 16, 16))   # the hole in it
+    shaft = QPainterPath()
+    shaft.addRect(QRectF(46, 46, 42, 12))     # shaft
+    shaft.addRect(QRectF(64, 58, 10, 16))     # long tooth
+    shaft.addRect(QRectF(79, 58, 9, 11))      # short tooth
+    return path.united(shaft)
+
+
 def tray_icon(status: str) -> QIcon:
-    """A key glyph with a small status dot in the corner."""
+    """The key glyph with a status dot, drawn to suit light and dark trays."""
     size = 64
     pixmap = QPixmap(size, size)
     pixmap.fill(Qt.GlobalColor.transparent)
     p = QPainter(pixmap)
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-    colour = _key_color()
+    # The key occupies the upper left so the dot has a clear corner of its own.
+    p.save()
+    p.scale(size / 108 * 0.92, size / 108 * 0.92)
+    p.translate(-6, 4)
     p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(colour)
-    # Bow of the key: a ring.
-    p.drawEllipse(QRectF(6, 14, 26, 26))
-    p.setBrush(QColor(0, 0, 0, 0))
-    p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Clear)
-    p.setBrush(Qt.GlobalColor.black)
-    p.drawEllipse(QRectF(14, 22, 10, 10))
-    p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
-    # Shaft and teeth.
-    p.setBrush(colour)
-    p.drawRect(QRectF(30, 23, 26, 8))
-    p.drawRect(QRectF(44, 31, 6, 10))
-    p.drawRect(QRectF(52, 31, 5, 7))
+    p.setBrush(_key_color())
+    p.drawPath(_key_path())
+    p.restore()
 
     dot = QColor(STATUS_COLORS.get(status, STATUS_COLORS["none"]))
     p.setBrush(dot)
     p.setPen(Qt.PenStyle.NoPen)
-    p.drawEllipse(QRectF(38, 42, 20, 20))
+    p.drawEllipse(QRectF(size - 22, size - 22, 20, 20))
     p.end()
     return QIcon(pixmap)
 
