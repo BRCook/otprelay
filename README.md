@@ -18,8 +18,7 @@ Forward one-time codes from your Android phone to your desktop, end-to-end encry
 ## Design
 
 ```
- source ──(encrypted per receiver)──▶ relay ──(WebSocket)──▶ receiver ──▶ clipboard
- (phone)                                                     (desktop)
+ source -> relay -> receiver -> clipboard
 ```
 
 * **Source** (Android app, Kotlin): detects codes in notifications, encrypts them separately for each paired receiver, and sends them to the relay.
@@ -38,7 +37,7 @@ The full API and encryption scheme are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Security model
 
-* Codes are encrypted on the source with libsodium sealed boxes, one copy per receiver. Only that receiver's private key can open it.
+* Codes are encrypted on the source with libsodium sealed boxes, one copy per receiver.
 * A source trusts only keys it scanned itself. The relay can tell a source that a receiver was removed, but never that one was added, so a compromised relay cannot redirect codes to itself.
 * The relay database holds no secrets: tokens are stored as SHA-256 hashes.
 * There are no usernames or passwords. Sources join with single-use invites; receivers join by being scanned by a source.
