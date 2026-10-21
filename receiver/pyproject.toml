@@ -16,7 +16,7 @@ dependencies = [
     "qrcode>=7.4",
 ]
 
-[project.gui-scripts]
+[project.scripts]
 otprelay-receiver = "otprelay_receiver.app:main"
 
 [tool.appimage]
@@ -25,6 +25,11 @@ entry_point = "otprelay-receiver"
 icon = "otprelay-receiver.png"
 desktop = "otprelay-receiver.desktop"
 python = "3.12"
+
+[tool.appimage.hooks]
+# PySide6 bundles Jinja templates named *.py, which are not valid Python and
+# break the byte-compile step, plus development tools no running app needs.
+pre_package = "packaging/trim-appdir.sh"
 
 [tool.setuptools]
 packages = ["otprelay_receiver"]
