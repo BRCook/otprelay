@@ -124,9 +124,18 @@ private fun SetupScreen(state: AppState, scope: CoroutineScope) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
+    if (relay.trim().startsWith("http://")) {
+        Text(
+            "Use an https:// address. Codes are encrypted either way, but over " +
+                "plain http anyone on the network can read this phone's relay token.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
     Button(
         onClick = { state.register(scope, relay.trim(), invite.trim(), name.trim()) },
-        enabled = !state.busy && relay.length > 8 && invite.isNotBlank(),
+        enabled = !state.busy && relay.trim().startsWith("https://") &&
+            relay.length > 10 && invite.isNotBlank(),
         modifier = Modifier.fillMaxWidth(),
     ) { Text("Register") }
 }
@@ -135,6 +144,7 @@ private fun SetupScreen(state: AppState, scope: CoroutineScope) {
 private fun HomeScreen(state: AppState, scope: CoroutineScope) {
     val context = LocalContext.current
     var confirmReset by remember { mutableStateOf(false) }
+    var editWords by remember { mutableStateOf(false) }
     var confirmUnpair by remember { mutableStateOf<ReceiverRow?>(null) }
 
     LaunchedEffect(state.resumeTick) { state.refresh(scope) }
@@ -187,6 +197,21 @@ private fun HomeScreen(state: AppState, scope: CoroutineScope) {
                     color = MaterialTheme.colorScheme.error,
                 )
             }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Mark messages read")
+                    Text(
+                        "After forwarding a code, mark the notification as read, " +
+                            "or dismiss the notification if it cannot be marked as read.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Switch(checked = state.markAsRead, onCheckedChange = state::updateMarkAsRead)
+            }
             if (state.lastEvent.isNotEmpty()) {
                 Text(state.lastEvent, style = MaterialTheme.typography.bodySmall)
             }
@@ -225,6 +250,11 @@ private fun HomeScreen(state: AppState, scope: CoroutineScope) {
         modifier = Modifier.fillMaxWidth(),
     ) { Text("Refresh") }
 
+    OutlinedButton(
+        onClick = { editWords = true },
+        modifier = Modifier.fillMaxWidth(),
+    ) { Text("Detection words (${state.keywords.size})") }
+
     Spacer(modifier = Modifier.height(8.dp))
     TextButton(onClick = { confirmReset = true }, modifier = Modifier.fillMaxWidth()) {
         Text("Forget this relay", color = MaterialTheme.colorScheme.error)
@@ -245,6 +275,10 @@ private fun HomeScreen(state: AppState, scope: CoroutineScope) {
                 TextButton(onClick = { confirmUnpair = null }) { Text("Cancel") }
             },
         )
+    }
+
+    if (editWords) {
+        KeywordDialog(state, onClose = { editWords = false })
     }
 
     if (confirmReset) {
@@ -268,6 +302,61 @@ private fun HomeScreen(state: AppState, scope: CoroutineScope) {
             },
         )
     }
+}
+
+@Composable
+private fun KeywordDialog(state: AppState, onClose: () -> Unit) {
+    var newWord by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text("Detection words") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    "A message is only treated as a code if it contains one of these " +
+                        "words. Spaces and hyphens are interchangeable, so \"one time\" " +
+                        "also matches \"one-time\".",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                for (word in state.keywords) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(word)
+                        TextButton(onClick = { state.removeKeyword(word) }) { Text("Remove") }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = newWord,
+                        onValueChange = { newWord = it.take(32) },
+                        label = { Text("Add a word") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Button(
+                        onClick = {
+                            state.addKeyword(newWord)
+                            newWord = ""
+                        },
+                        enabled = newWord.isNotBlank(),
+                    ) { Text("Add") }
+                }
+                TextButton(onClick = state::restoreKeywords) { Text("Restore the defaults") }
+            }
+        },
+        confirmButton = { TextButton(onClick = onClose) { Text("Done") } },
+    )
 }
 
 @Composable

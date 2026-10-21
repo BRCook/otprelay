@@ -66,6 +66,27 @@ class Store(context: Context) {
         get() = prefs.getBoolean(KEY_FORWARDING, true)
         set(value) = prefs.edit().putBoolean(KEY_FORWARDING, value).apply()
 
+    /**
+     * The words that mark a message as being about a code. Editable, so an
+     * unusual bank or another language needs no new build. Stored sorted for a
+     * stable order on screen.
+     */
+    var keywords: Set<String>
+        get() = prefs.getStringSet(KEY_KEYWORDS, null) ?: CodeExtractor.DEFAULT_KEYWORDS.toSet()
+        set(value) = prefs.edit()
+            .putStringSet(KEY_KEYWORDS, value.map { it.trim().lowercase() }
+                .filter { it.isNotEmpty() }.toSet())
+            .apply()
+
+    /**
+     * Whether to mark a message read once its code has been forwarded. Uses the
+     * notifying app's own "mark as read" action where there is one, and
+     * otherwise just dismisses the notification.
+     */
+    var markAsRead: Boolean
+        get() = prefs.getBoolean(KEY_MARK_READ, false)
+        set(value) = prefs.edit().putBoolean(KEY_MARK_READ, value).apply()
+
     /** A short line about the most recent code, shown on the main screen. */
     var lastEvent: String
         get() = prefs.getString(KEY_LAST_EVENT, "") ?: ""
@@ -133,6 +154,8 @@ class Store(context: Context) {
         const val KEY_FORWARDING = "forwarding"
         const val KEY_EXCLUDED = "excluded_packages"
         const val KEY_RECEIVERS = "receivers"
+        const val KEY_KEYWORDS = "keywords"
+        const val KEY_MARK_READ = "mark_as_read"
         const val KEY_LAST_EVENT = "last_event"
         const val KEY_LAST_EVENT_AT = "last_event_at"
 

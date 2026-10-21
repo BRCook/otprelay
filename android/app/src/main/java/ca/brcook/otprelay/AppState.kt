@@ -40,6 +40,10 @@ class AppState(context: Context) {
         private set
     var forwarding by mutableStateOf(store.forwarding)
         private set
+    var markAsRead by mutableStateOf(store.markAsRead)
+        private set
+    var keywords by mutableStateOf(store.keywords.sorted())
+        private set
     var receivers by mutableStateOf(emptyList<ReceiverRow>())
         private set
     var busy by mutableStateOf(false)
@@ -68,6 +72,35 @@ class AppState(context: Context) {
     fun updateForwarding(enabled: Boolean) {
         store.forwarding = enabled
         forwarding = enabled
+    }
+
+    fun updateMarkAsRead(enabled: Boolean) {
+        store.markAsRead = enabled
+        markAsRead = enabled
+    }
+
+    fun addKeyword(word: String) {
+        val cleaned = word.trim().lowercase()
+        if (cleaned.isEmpty()) return
+        if (cleaned in keywords) {
+            message = "\"$cleaned\" is already in the list."
+            return
+        }
+        store.keywords = store.keywords + cleaned
+        keywords = store.keywords.sorted()
+    }
+
+    fun removeKeyword(word: String) {
+        store.keywords = store.keywords - word
+        keywords = store.keywords.sorted()
+        if (keywords.isEmpty()) {
+            message = "With no words left, no codes will be detected at all."
+        }
+    }
+
+    fun restoreKeywords() {
+        store.keywords = CodeExtractor.DEFAULT_KEYWORDS.toSet()
+        keywords = store.keywords.sorted()
     }
 
     /** Local view of the receivers, shown before the relay answers. */

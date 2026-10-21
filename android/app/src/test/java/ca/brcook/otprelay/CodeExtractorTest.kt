@@ -73,6 +73,34 @@ class CodeExtractorTest {
     }
 
     @Test
+    fun usesTheKeywordListItIsGiven() {
+        val withSpanish = CodeExtractor.DEFAULT_KEYWORDS + "clave"
+        assertEquals("445566", CodeExtractor.extract("Su clave es 445566", withSpanish))
+        // The same message means nothing without that word in the list.
+        assertEquals(null, CodeExtractor.extract("Su clave es 445566"))
+        assertEquals(null, CodeExtractor.extract("Your code is 123456", listOf("clave")))
+    }
+
+    @Test
+    fun treatsSpacesAndHyphensInAPhraseAsInterchangeable() {
+        for (wording in listOf("one-time", "one time", "onetime")) {
+            assertEquals("1234", CodeExtractor.extract("Your $wording passcode is 1234"))
+        }
+    }
+
+    @Test
+    fun aWordWithRegexCharactersMatchesLiterally() {
+        val odd = listOf("c.de")
+        assertEquals("123456", CodeExtractor.extract("your c.de is 123456", odd))
+        assertEquals(null, CodeExtractor.extract("your cXde is 123456", odd))
+    }
+
+    @Test
+    fun anEmptyKeywordListDetectsNothing() {
+        assertEquals(null, CodeExtractor.extract("Your code is 123456", emptyList()))
+    }
+
+    @Test
     fun handlesEmptyInput() {
         assertCode(null, "")
         assertEquals(null, CodeExtractor.extract(null))

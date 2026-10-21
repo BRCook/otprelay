@@ -34,7 +34,7 @@ The full API and encryption scheme are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 |--------------------|------------------|
 | Relay              | Working          |
 | Receiver (desktop) | Working on Linux |
-| Source (Android)   | Planned          |
+| Source (Android)   | Working          |
 
 ## Security model
 
@@ -122,9 +122,16 @@ otprelay-admin deluser <user>        # remove a user and everything they own
 
 One relay can serve multiple users. Their phones (sources) redeem the invite, and their desktops (receivers) pair with that source, so nobody can receive anyone else's codes.
 
+## Setting it up
+
+1. **Run a relay** (below) and put it behind HTTPS.
+2. **Create an invite**: `otprelay-admin invite yourname`.
+3. **Set up the phone**: see [android/README.md](android/README.md). One step is easy to miss: Android hands apps a redacted copy of any notification that looks like it holds a code, so the app needs the `RECEIVE_SENSITIVE_NOTIFICATIONS` permission granted over ADB.
+4. **Set up each computer**: see [receiver/README.md](receiver/README.md), then scan its QR code with the phone.
+
 ## Testing without a phone
 
-`tools/dev-source.py` implements the source side of the protocol in Python, so you can exercise a relay and a receiver from a terminal before the Android app exists. See [receiver/README.md](receiver/README.md#testing-without-the-phone-app).
+`tools/dev-source.py` implements the source side of the protocol in Python, so you can exercise a relay and a receiver from a terminal. See [receiver/README.md](receiver/README.md#testing-without-the-phone-app).
 
 ## License
 

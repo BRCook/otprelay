@@ -4,6 +4,8 @@ package ca.brcook.otprelay
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.os.Build
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -38,12 +40,12 @@ class NotificationListener : NotificationListenerService() {
         super.onCreate()
         store = Store(this)
         relay = RelayClient(store)
-        Log.i(TAG, "listener service created")
+        debug("listener service created")
     }
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.i(TAG, "listener connected to the notification stream")
+        debug("listener connected to the notification stream")
     }
 
     override fun onListenerDisconnected() {
@@ -98,7 +100,8 @@ class NotificationListener : NotificationListenerService() {
 
         // The collapsed preview is often truncated mid-sentence, so every source
         // is tried and the first that yields a code wins.
-        val code = bodies.firstNotNullOfOrNull { (_, text) -> CodeExtractor.extract(text) }
+        val words = store.keywords
+        val code = bodies.firstNotNullOfOrNull { (_, text) -> CodeExtractor.extract(text, words) }
             ?: return skip(
                 from,
                 "no code in " + bodies.joinToString(", ") { "${it.first}=${it.second.length} chars" }
@@ -110,8 +113,8 @@ class NotificationListener : NotificationListenerService() {
         if (recent.put(key, now) != null) return
 
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
-        Log.i(TAG, "found a ${code.length}-character code in a notification from $from")
-        send(code, appLabel(sbn.packageName), title)
+        debug("found a ${code.length}-character code in a notification from $from")
+        send(code, appLabel(sbn.packageName), title, sbn)
     }
 
     /**
@@ -159,11 +162,23 @@ class NotificationListener : NotificationListenerService() {
         return found.distinctBy { it.second }
     }
 
-    private fun skip(packageName: String, reason: String) {
-        Log.d(TAG, "ignored a notification from $packageName: $reason")
+    /**
+     * True only for builds installed from the IDE. Release builds stay quiet, so
+     * the app never writes which apps notify you, or how long their text is, to
+     * a log other apps with log access could read.
+     */
+    private val verbose: Boolean
+        get() = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    private fun debug(message: String) {
+        if (verbose) Log.d(TAG, message)
     }
 
-    private fun send(code: String, app: String, from: String) {
+    private fun skip(packageName: String, reason: String) {
+        debug("ignored a notification from $packageName: $reason")
+    }
+
+    private fun send(code: String, app: String, from: String, sbn: StatusBarNotification) {
         val plaintext = JSONObject()
             .put("v", 1)
             .put("code", code)
@@ -179,12 +194,15 @@ class NotificationListener : NotificationListenerService() {
                 try {
                     val result = relay.send(plaintext)
                     val reached = result.sent.size + result.queued.size
-                    Log.i(TAG, "sent to ${result.sent.size}, queued for ${result.queued.size}")
+                    debug("sent to ${result.sent.size}, queued for ${result.queued.size}")
                     store.lastEvent = if (reached > 0) {
                         "Sent a code to $reached computer${if (reached == 1) "" else "s"}"
                     } else {
                         "Found a code but no computer is paired"
                     }
+                    // Only once the code is safely away, so a failed send never
+                    // hides the message it came from.
+                    if (reached > 0) markRead(sbn)
                     return@launch
                 } catch (e: RelayException) {
                     lastError = e.message
@@ -203,6 +221,36 @@ class NotificationListener : NotificationListenerService() {
     private fun finish(error: String?) {
         Log.w(TAG, "could not send a code: $error")
         store.lastEvent = "Could not send a code: ${error ?: "unknown error"}"
+    }
+
+    /**
+     * Mark the message read, if the user asked for that.
+     *
+     * The notifying app's own action is used where it offers one, since that
+     * marks the message read in the app itself. Otherwise the notification is
+     * simply dismissed, which clears the shade without touching the app.
+     */
+    private fun markRead(sbn: StatusBarNotification) {
+        if (!store.markAsRead) return
+        val action = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            sbn.notification?.actions?.firstOrNull {
+                it.semanticAction == Notification.Action.SEMANTIC_ACTION_MARK_AS_READ
+            }
+        } else {
+            null
+        }
+        try {
+            val intent = action?.actionIntent
+            if (intent != null) {
+                intent.send()
+                debug("marked the message read with the app's own action")
+            } else {
+                cancelNotification(sbn.key)
+                debug("dismissed the notification; the app offers no mark-as-read action")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "could not mark the message read", e)
+        }
     }
 
     private fun appLabel(packageName: String): String = try {

@@ -14,12 +14,50 @@ import kotlin.math.abs
  */
 object CodeExtractor {
 
-    /** Words that mark a message as being about a code. Without one, nothing is sent. */
-    private val KEYWORDS = Regex(
-        "(?i)\\b(code|otp|passcode|pass code|password|pin|2fa|mfa|verification|verify|" +
-            "authenticate|authentication|token|one[ -]?time|sign[ -]?in|sign[ -]?on|" +
-            "log[ -]?in|login)\\b"
+    /**
+     * Words that mark a message as being about a code. Without one, nothing is
+     * sent. Users can edit this list, so a bank with unusual wording, or a
+     * language other than English, can be handled without a new build.
+     */
+    val DEFAULT_KEYWORDS: List<String> = listOf(
+        "code", "otp", "passcode", "password", "pin", "2fa", "mfa",
+        "verification", "verify", "authenticate", "authentication", "token",
+        "one time", "sign in", "sign on", "log in", "login",
     )
+
+    private var cachedWords: List<String> = DEFAULT_KEYWORDS
+    private var cachedRegex: Regex = buildKeywordRegex(DEFAULT_KEYWORDS)
+
+    /**
+     * Builds the keyword pattern.
+     *
+     * Spaces and hyphens inside a phrase are treated as interchangeable and
+     * optional, so "one time" also matches "one-time" and "onetime". Everything
+     * else is escaped, so a word with regex characters in it cannot break the
+     * pattern or match more than it should.
+     */
+    private fun buildKeywordRegex(words: Collection<String>): Regex {
+        val parts = words
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .map { word ->
+                word.split(Regex("[\\s-]+"))
+                    .filter { it.isNotEmpty() }
+                    .joinToString("[ -]?") { Regex.escape(it) }
+            }
+        if (parts.isEmpty()) return Regex("(?!)")  // matches nothing
+        return Regex("(?i)\\b(" + parts.joinToString("|") + ")\\b")
+    }
+
+    @Synchronized
+    private fun keywordRegex(words: Collection<String>): Regex {
+        val list = words.toList()
+        if (list != cachedWords) {
+            cachedWords = list
+            cachedRegex = buildKeywordRegex(list)
+        }
+        return cachedRegex
+    }
 
     /**
      * A candidate code: 4 to 8 letters and digits standing on their own, with at
@@ -37,12 +75,14 @@ object CodeExtractor {
     /**
      * Returns the code in [body], or null if there is none.
      *
-     * [body] should be the notification's text, not its title.
+     * [body] should be the notification's text, not its title. [words] is the
+     * user's keyword list; without one the defaults are used.
      */
-    fun extract(body: String?): String? {
+    @JvmOverloads
+    fun extract(body: String?, words: Collection<String> = DEFAULT_KEYWORDS): String? {
         if (body.isNullOrBlank()) return null
         val text = INVISIBLE.replace(body, "")
-        val keywords = KEYWORDS.findAll(text).map { it.range.first }.toList()
+        val keywords = keywordRegex(words).findAll(text).map { it.range.first }.toList()
         if (keywords.isEmpty()) return null
 
         var best: String? = null
