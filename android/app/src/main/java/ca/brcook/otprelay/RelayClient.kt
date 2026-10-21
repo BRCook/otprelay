@@ -40,6 +40,7 @@ class RelayClient(private val store: Store) {
     /** Redeem an invite and remember the token this phone gets back. */
     fun register(relayUrl: String, invite: String, name: String) {
         val url = relayUrl.trimEnd('/')
+        require(url.startsWith("https://")) { "The relay address must start with https://" }
         val body = JSONObject().put("invite", invite).put("name", name.take(64))
         val reply = call("POST", "$url/api/register", body, token = null)
         store.relayUrl = url

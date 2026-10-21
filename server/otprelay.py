@@ -258,7 +258,6 @@ class Relay:
         return web.json_response({"ok": True})
 
     async def claim(self, request):
-        self.limit(request, "claim")
         data = await read_json(request)
         secret_hash = token_hash(str(data.get("pairing_secret", "")))
         row = self.db.execute(

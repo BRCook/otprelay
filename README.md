@@ -89,7 +89,7 @@ Set in `/etc/conf.d/otprelay` (Alpine) or `/etc/default/otprelay` (Debian):
 | `OTPRELAY_PORT`                          | `8787`                          | Listen port        |
 | `OTPRELAY_DB`                            | `/var/lib/otprelay/otprelay.db` | SQLite database    |
 | `OTPRELAY_TLS_CERT` / `OTPRELAY_TLS_KEY` | unset                           | Serve TLS directly |
-| `OTPRELAY_RATE_LIMIT`                    | `20`                            | Attempts per window on the endpoints that need no token (`/api/register`, `/api/pair/claim`) |
+| `OTPRELAY_RATE_LIMIT`                    | `20`                            | Attempts per window on the endpoints that need no token (`/api/register`) |
 | `OTPRELAY_RATE_WINDOW`                   | `300`                           | Length of that window, in seconds |
 | `OTPRELAY_TRUST_PROXY`                   | unset                           | Count rate limits per real client IP from `X-Forwarded-For`. Only set this when a reverse proxy sets that header, or the limit can be dodged with a forged one |
 
