@@ -41,7 +41,7 @@ class RelayClient(private val store: Store) {
     fun register(relayUrl: String, invite: String, name: String) {
         val url = relayUrl.trimEnd('/')
         require(url.startsWith("https://")) { "The relay address must start with https://" }
-        val body = JSONObject().put("invite", invite).put("name", name.take(64))
+        val body = JSONObject().put("invite", invite)
         val reply = call("POST", "$url/api/register", body, token = null)
         store.relayUrl = url
         store.sourceId = reply.getString("source_id")
@@ -68,11 +68,9 @@ class RelayClient(private val store: Store) {
     }
 
     /** Register a receiver this phone has just scanned. Returns its relay id. */
-    fun addReceiver(pairingSecret: String, name: String, platform: String): String {
+    fun addReceiver(pairingSecret: String): String {
         val body = JSONObject()
             .put("pairing_secret", pairingSecret)
-            .put("name", name.take(64))
-            .put("platform", platform)
         return call("POST", "${base()}/api/receivers", body).getString("receiver_id")
     }
 
@@ -87,9 +85,13 @@ class RelayClient(private val store: Store) {
         if (receivers.isEmpty()) return SendResult(emptyList(), emptyList(), emptyList())
         val messages = JSONArray()
         for (receiver in receivers) {
+            if (receiver.authKey.isEmpty()) continue  // paired before sender auth; needs re-pairing
             val ciphertext = Crypto.seal(Crypto.decodeB64(receiver.publicKey), plaintext)
             messages.put(
-                JSONObject().put("receiver_id", receiver.id).put("ciphertext", ciphertext)
+                JSONObject()
+                    .put("receiver_id", receiver.id)
+                    .put("ciphertext", ciphertext)
+                    .put("mac", Crypto.mac(receiver.authKey, ciphertext))
             )
         }
         val reply = call("POST", "${base()}/api/send", JSONObject().put("messages", messages))

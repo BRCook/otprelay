@@ -9,7 +9,7 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequ
 from PySide6.QtWebSockets import QWebSocket
 
 from .config import Pairing
-from .crypto import decrypt
+from .crypto import decrypt, verify_mac
 
 log = logging.getLogger(__name__)
 
@@ -164,10 +164,23 @@ class Connection(QObject):
         self.ws.sendTextMessage(json.dumps({"type": "ack", "id": msg_id}))
 
     def _handle(self, msg):
+        ciphertext = str(msg.get("ciphertext", ""))
+        if not self.pairing.auth_key:
+            log.warning(
+                "ignored a message from %s: this pairing predates sender "
+                "authentication; unpair and pair again",
+                self.pairing.source_name)
+            return
+        if not verify_mac(self.pairing.auth_key, ciphertext,
+                          str(msg.get("mac", ""))):
+            log.warning("ignored a message from %s: bad or missing sender MAC",
+                        self.pairing.source_name)
+            return
         try:
-            data = decrypt(self.pairing.private_key, str(msg.get("ciphertext", "")))
+            data = decrypt(self.pairing.private_key, ciphertext)
         except ValueError as e:
-            log.warning("ignored a message from %s: %s", self.pairing.source_name, e)
+            log.warning("ignored a message from %s: %s",
+                        self.pairing.source_name, e)
             return
         if abs(time.time() - data["ts"]) > MAX_CODE_AGE:
             log.info("ignored a stale code from %s", self.pairing.source_name)

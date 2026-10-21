@@ -36,7 +36,8 @@ class ReceiverApp(QObject):
         self.pairings_window = PairingsWindow()
         self.pairings_window.add_requested.connect(self.start_pairing)
         self.pairings_window.remove_requested.connect(self.unpair)
-
+        self.pairings_window.rename_requested.connect(self.rename)
+        
         self.tray = QSystemTrayIcon(tray_icon("none"), self)
         self.tray.setToolTip("otprelay receiver")
         self.tray.activated.connect(self._on_activated)
@@ -154,6 +155,14 @@ class ReceiverApp(QObject):
                        callback=lambda status, data, error: None)
         self._drop(pairing)
         self._notify("Unpaired", f"Codes from {pairing.source_name} will no longer arrive here.")
+
+    def rename(self, receiver_id: str, name: str):
+        for p in self.store.pairings:
+            if p.receiver_id == receiver_id:
+                p.source_name = name
+                self.store.save()
+                self._refresh()
+                return
 
     def _drop(self, pairing: Pairing):
         connection = self.connections.pop(pairing.receiver_id, None)

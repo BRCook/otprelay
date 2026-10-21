@@ -7,7 +7,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFormLayout, QFrame,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
                                QPushButton, QTableWidget, QTableWidgetItem, QVBoxLayout,
-                               QWidget)
+                               QWidget, QInputDialog)
 
 from . import autostart
 from .config import Pairing, Settings
@@ -144,6 +144,7 @@ class PairingsWindow(QWidget):
 
     add_requested = Signal()
     remove_requested = Signal(str)  # receiver_id
+    rename_requested = Signal(str, str)  # receiver_id, new name
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -170,12 +171,12 @@ class PairingsWindow(QWidget):
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.close)
 
-        self.table.itemSelectionChanged.connect(
-            lambda: self.remove_button.setEnabled(bool(self.table.selectedItems())))
+        self.table.itemSelectionChanged.connect(self._on_selection)
 
         row = QHBoxLayout()
         row.addWidget(add_button)
         row.addWidget(self.remove_button)
+        row.addWidget(self.rename_button)
         row.addStretch(1)
         row.addWidget(close_button)
 
@@ -202,6 +203,11 @@ class PairingsWindow(QWidget):
                     item.setToolTip(STATUS_COLORS.get(status, ""))
                 self.table.setItem(row, column, item)
 
+    def _on_selection(self):
+        has = bool(self.table.selectedItems())
+        self.remove_button.setEnabled(has)
+        self.rename_button.setEnabled(has)
+
     def _remove_selected(self):
         rows = {item.row() for item in self.table.selectedItems()}
         if not rows:
@@ -215,6 +221,19 @@ class PairingsWindow(QWidget):
             "You can pair again at any time.")
         if answer == QMessageBox.StandardButton.Yes:
             self.remove_requested.emit(receiver_id)
+
+    def _rename_selected(self):
+        rows = {item.row() for item in self.table.selectedItems()}
+        if not rows:
+            return
+        item = self.table.item(sorted(rows)[0], 0)
+        name, ok = QInputDialog.getText(self, "Rename phone",
+                                        "Name for this phone:",
+                                        text=item.text())
+        name = name.strip()[:64]
+        if ok and name:
+            self.rename_requested.emit(item.data(Qt.ItemDataRole.UserRole),
+                                       name)
 
 
 class SettingsDialog(QDialog):

@@ -23,6 +23,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import hashlib
+import hmac
 from pathlib import Path
 
 from nacl.public import PublicKey, SealedBox
@@ -68,6 +70,10 @@ def b64url_decode(text: str) -> bytes:
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
 
 
+def derive(secret: str, label: bytes) -> bytes:
+    return hmac.new(b64url_decode(secret), label, hashlib.sha256).digest()
+
+
 def cmd_register(args):
     state = load()
     state["relay"] = args.relay.rstrip("/")
@@ -98,15 +104,22 @@ def cmd_add(args):
     key = b64url_decode(q.get("k", ""))
     if len(key) != 32:
         sys.exit("The link does not carry a valid public key.")
+    secret = q.get("s", "")
+    claim = base64.urlsafe_b64encode(
+        derive(secret, b"otprelay claim v1")).rstrip(b"=").decode()
     status, data = call(state, "POST", "/api/receivers",
-                        {"pairing_secret": q.get("s", ""), "name": q.get("n", "Receiver"),
+                        {"pairing_secret": claim,
+                         "name": q.get("n", "Receiver"),
                          "platform": q.get("p", "unknown")})
     if status != 200:
         sys.exit(f"Could not add the receiver ({status}): {data.get('error', '')}")
     receiver_id = data["receiver_id"]
     state["receivers"][receiver_id] = {"name": q.get("n", "Receiver"),
                                        "platform": q.get("p", "unknown"),
-                                       "public_key": base64.b64encode(key).decode()}
+                                       "public_key": base64.b64encode(key).decode(),
+                                       "auth_key": base64.b64encode(
+                                           derive(secret,
+                                                  b"otprelay auth v1")).decode()}
     save(state)
     print(f"Added receiver {receiver_id} ({q.get('n')}).")
 
@@ -141,12 +154,16 @@ def cmd_send(args):
     if not known:
         sys.exit("No receivers with stored keys. Add one first.")
     plaintext = json.dumps({"v": 1, "code": args.code, "app": args.app,
-                            "from": args.sender, "ts": int(time.time())}).encode()
+                            "ts": int(time.time())}).encode()
     messages = []
     for receiver_id, info in known.items():
         box = SealedBox(PublicKey(base64.b64decode(info["public_key"])))
-        messages.append({"receiver_id": receiver_id,
-                         "ciphertext": base64.b64encode(box.encrypt(plaintext)).decode()})
+        ciphertext = base64.b64encode(box.encrypt(plaintext)).decode()
+        mac = base64.b64encode(hmac.new(base64.b64decode(info["auth_key"]),
+                                        ciphertext.encode(),
+                                        hashlib.sha256).digest()).decode()
+        messages.append(
+            {"receiver_id": receiver_id, "ciphertext": ciphertext, "mac": mac})
     status, data = call(state, "POST", "/api/send", {"messages": messages})
     if status != 200:
         sys.exit(f"Send failed ({status}): {data.get('error', '')}")
@@ -184,7 +201,6 @@ def main():
     p = sub.add_parser("send", help="encrypt and send a code to every paired receiver")
     p.add_argument("code")
     p.add_argument("--app", default="Messages")
-    p.add_argument("--sender", dest="sender", default="242227")
 
     p = sub.add_parser("remove", help="unpair a receiver")
     p.add_argument("receiver_id")

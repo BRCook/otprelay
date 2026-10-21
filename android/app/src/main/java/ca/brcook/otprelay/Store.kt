@@ -13,6 +13,8 @@ data class Receiver(
     val platform: String,
     /** The receiver's X25519 public key, standard base64. Scanned from its QR code. */
     val publicKey: String,
+    /** Base64 HMAC key derived from the pairing secret. Empty on pairings made before sender auth. */
+    val authKey: String,
     val pairedAt: Long,
 ) {
     fun toJson(): JSONObject = JSONObject()
@@ -21,6 +23,7 @@ data class Receiver(
         .put("platform", platform)
         .put("public_key", publicKey)
         .put("paired_at", pairedAt)
+        .put("auth_key", authKey)
 
     companion object {
         fun fromJson(o: JSONObject) = Receiver(
@@ -29,6 +32,7 @@ data class Receiver(
             platform = o.optString("platform", "unknown"),
             publicKey = o.getString("public_key"),
             pairedAt = o.optLong("paired_at", 0L),
+            authKey = o.optString("auth_key", ""),
         )
     }
 }
@@ -53,8 +57,8 @@ class Store(context: Context) {
         set(value) = prefs.edit().putString(KEY_SOURCE_ID, value).apply()
 
     var sourceToken: String
-        get() = prefs.getString(KEY_TOKEN, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_TOKEN, value).apply()
+        get() = Vault.open(prefs.getString(KEY_TOKEN, "") ?: "") ?: ""
+        set(value) = prefs.edit().putString(KEY_TOKEN, Vault.seal(value)).apply()
 
     /** The name this phone registered under, shown on receivers. */
     var sourceName: String
@@ -111,7 +115,7 @@ class Store(context: Context) {
     // --- receivers ----------------------------------------------------------
 
     fun receivers(): List<Receiver> {
-        val raw = prefs.getString(KEY_RECEIVERS, "[]") ?: "[]"
+        val raw = Vault.open(prefs.getString(KEY_RECEIVERS, "") ?: "").orEmpty().ifEmpty { "[]" }
         return runCatching {
             val array = JSONArray(raw)
             (0 until array.length()).map { Receiver.fromJson(array.getJSONObject(it)) }
@@ -121,7 +125,7 @@ class Store(context: Context) {
     private fun writeReceivers(list: List<Receiver>) {
         val array = JSONArray()
         list.forEach { array.put(it.toJson()) }
-        prefs.edit().putString(KEY_RECEIVERS, array.toString()).apply()
+        prefs.edit().putString(KEY_RECEIVERS, Vault.seal(array.toString())).apply()
     }
 
     fun addReceiver(receiver: Receiver) {

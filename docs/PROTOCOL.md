@@ -27,6 +27,7 @@ A source encrypts only to public keys it obtained itself by scanning a QR code. 
 * Primitive: libsodium sealed box (`crypto_box_seal`): X25519 key agreement with a fresh ephemeral key per message, XSalsa20-Poly1305 authenticated encryption.
 * Each receiver generates its own X25519 key pair at pairing time.
 * On the wire, a ciphertext is the sealed box encoded as standard base64 (with padding), at most 4096 characters.
+* Every message also carries mac: base64 of HMAC-SHA256 over the UTF-8 bytes of the base64 ciphertext, keyed with the pairing’s auth key. Receivers reject any message whose MAC does not verify, so neither the relay nor anyone holding only the source token can inject codes.
 * The plaintext is UTF-8 JSON:
 
 ```json
@@ -38,7 +39,6 @@ A source encrypts only to public keys it obtained itself by scanning a QR code. 
 | `v`    | yes      | Plaintext format version, currently 1            |
 | `code` | yes      | The extracted one-time code                      |
 | `app`  | no       | Display name of the app the code came from       |
-| `from` | no       | Notification title, usually who sent the message |
 | `ts`   | yes      | Unix time the source saw the code                |
 
 Receivers should ignore codes whose `ts` is more than 5 minutes old.
@@ -62,6 +62,15 @@ otprelay://pair?v=1&u=<relay>&k=<public key>&s=<secret>&n=<name>&p=<platform>
 
 The source must refuse the QR code if `u` does not match its own relay (after removing any trailing slash), and must check that `k` decodes to 32 bytes.
 
+## Derived values. 
+
+`s` itself is never sent to the relay. Both sides derive, with
+HMAC-SHA256 keyed by the raw 32 bytes of `s`:
+`claim = HMAC (s, "otprelay claim v1")`, base64url unpadded, sent as
+`pairing_secret` to `POST /api/receivers` and `POST /api/pair/claim`;
+`auth = HMAC (s, "otprelay auth v1")`, the 32-byte MAC key, kept by both and never
+transmitted.
+
 ## Authentication
 
 Sources and receivers authenticate with `Authorization: Bearer <token>`. Tokens are never put in URLs. The relay stores only SHA-256 hashes of tokens.
@@ -78,7 +87,7 @@ Returns `ok`. No authentication. For monitoring and reverse proxy checks.
 
 Trade an invite for a source token. Invites look like `a1b2-c3d4-e5f6-a7b8`; case, dashes and spaces are ignored. They are single-use and expire after 24 hours.
 
-Request: `{"invite": "a1b2-c3d4-e5f6-a7b8", "name": "Galaxy S24"}`
+Request: `{"invite": "a1b2-c3d4-e5f6-a7b8"}`
 
 Response: `{"source_id": "...", "source_token": "..."}`
 
@@ -100,7 +109,7 @@ Response:
 
 Register a receiver after scanning its QR code.
 
-Request: `{"pairing_secret": "<s from QR>", "name": "<n>", "platform": "<p>"}`
+Request: `{"pairing_secret": "<s from QR>"}`
 
 Response: `{"receiver_id": "..."}`
 
@@ -117,7 +126,8 @@ Deliver one ciphertext per receiver.
 Request:
 
 ```json
-{"messages": [{"receiver_id": "f400d5c36ad2d0d8", "ciphertext": "<base64>"}]}
+{"messages": [{"receiver_id": "f400d5c36ad2d0d8", "ciphertext": "<base64>",
+  "mac": "<base64>"}]}
 ```
 
 Response:
@@ -149,7 +159,8 @@ The receiver unpairs itself. The source learns about it on its next `GET /api/re
 WebSocket for receiving codes. On connect, the relay first sends anything still queued, then live messages:
 
 ```json
-{"type": "code", "id": "9f2c...", "ciphertext": "<base64>", "sent": 1792345155}
+{"type": "code", "id": "9f2c...", "ciphertext": "<base64>", "sent": 1792345155,
+  "mac": "<base64>"}
 ```
 
 The receiver replies `{"type": "ack", "id": "9f2c..."}` once it has handled a message, including one it failed to decrypt. Unacknowledged messages are resent on reconnect until they expire, so receivers must ignore an `id` they have already handled.

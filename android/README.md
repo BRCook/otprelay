@@ -7,7 +7,7 @@ Read the warning in the [main README](../README.md) before using this. Forwardin
 ## What it does
 
 * Watches notifications from every app except the ones you exclude.
-* Encrypts each code per paired receiver.
+* Encrypts each code, with the app name and sender, per paired receiver.
 * Sends the encrypted code to the relay to be forwarded to the receiver.
 
 ## Requirements

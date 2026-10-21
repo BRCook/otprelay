@@ -38,6 +38,7 @@ PAIRING_TTL = 600      # seconds a desktop has to claim its pairing
 INVITE_TTL = 86400     # seconds an invite stays valid
 MAX_RECEIVERS = 20     # paired receivers per source
 MAX_CIPHERTEXT = 4096  # characters of base64 per message
+MAX_MAC = 64           # characters of base64 for the sender MAC
 MAX_NAME = 64
 
 SCHEMA = """
@@ -231,11 +232,15 @@ class Relay:
         if count >= MAX_RECEIVERS:
             fail(web.HTTPConflict, "receiver limit reached")
         receiver_id = secrets.token_hex(8)
+        platform = str(data.get("platform", "unknown")).lower()
+        if platform not in ("linux", "windows", "macos", "unknown"):
+            platform = "unknown"
         self.db.execute(
             "INSERT INTO receivers (id, source_id, token_hash, name, platform, created) "
             "VALUES (?, ?, NULL, ?, ?, ?)",
-            (receiver_id, source["id"], clean_name(data.get("name"), "Receiver"),
-             clean_name(data.get("platform"), "unknown"), now()))
+            (receiver_id, source["id"],
+             clean_name(data.get("name"), "Receiver"),
+             platform, now()))
         try:
             self.db.execute(
                 "INSERT INTO pairings (secret_hash, receiver_id, expires) VALUES (?, ?, ?)",
@@ -299,13 +304,17 @@ class Relay:
             ciphertext = m.get("ciphertext")
             if not isinstance(ciphertext, str) or not 0 < len(ciphertext) <= MAX_CIPHERTEXT:
                 fail(web.HTTPBadRequest, "invalid ciphertext")
+            mac = m.get("mac", "")
+            if not isinstance(mac, str) or len(mac) > MAX_MAC:
+                fail(web.HTTPBadRequest, "invalid mac")
             if receiver_id in owned:
-                outgoing.append((receiver_id, ciphertext))
+                outgoing.append((receiver_id, ciphertext, mac))
             else:
                 result["unknown"].append(receiver_id)
-        for receiver_id, ciphertext in outgoing:
+        for receiver_id, ciphertext, mac in outgoing:
             msg_id = secrets.token_hex(8)
-            payload = {"type": "code", "id": msg_id, "ciphertext": ciphertext, "sent": now()}
+            payload = {"type": "code", "id": msg_id, "ciphertext": ciphertext,
+                       "mac": mac, "sent": now()}
             self.queues.setdefault(receiver_id, {})[msg_id] = (now() + MESSAGE_TTL, payload)
             ws = self.sockets.get(receiver_id)
             if ws is not None and not ws.closed:
@@ -313,7 +322,7 @@ class Relay:
                     await ws.send_json(payload)
                     result["sent"].append(receiver_id)
                     continue
-                except ConnectionError:
+                except Exception:
                     pass
             result["queued"].append(receiver_id)
         return web.json_response(result)

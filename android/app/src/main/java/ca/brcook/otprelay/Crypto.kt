@@ -5,6 +5,8 @@ import com.goterl.lazysodium.LazySodiumAndroid
 import com.goterl.lazysodium.SodiumAndroid
 import com.goterl.lazysodium.interfaces.Box
 import java.util.Base64
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * Sealed boxes, the sending half of the scheme in docs/PROTOCOL.md.
@@ -15,6 +17,22 @@ import java.util.Base64
  */
 object Crypto {
     private val sodium = LazySodiumAndroid(SodiumAndroid())
+
+    private fun hmac(key: ByteArray, message: ByteArray): ByteArray =
+        Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(key, "HmacSHA256")) }.doFinal(message)
+
+    /** What both sides hand the relay as the pairing secret; the relay never sees [secret]. */
+    fun deriveClaim(secret: String): String =
+        Base64.getUrlEncoder().withoutPadding()
+            .encodeToString(hmac(decodeB64Url(secret), "otprelay claim v1".toByteArray()))
+
+    /** Base64 MAC key shared with the receiver. Stored per receiver, never sent. */
+    fun deriveAuthKey(secret: String): String =
+        encodeB64(hmac(decodeB64Url(secret), "otprelay auth v1".toByteArray()))
+
+    /** Base64 HMAC over the base64 ciphertext string, proving this phone sent it. */
+    fun mac(authKeyB64: String, ciphertextB64: String): String =
+        encodeB64(hmac(decodeB64(authKeyB64), ciphertextB64.toByteArray()))
 
     /** Encrypt [plaintext] for [publicKey], returning standard base64 with padding. */
     fun seal(publicKey: ByteArray, plaintext: ByteArray): String {

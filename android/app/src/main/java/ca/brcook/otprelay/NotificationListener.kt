@@ -24,8 +24,10 @@ import org.json.JSONObject
  * Watches notifications for one-time codes and forwards them encrypted.
  *
  * Every app is watched except those the user excludes, so codes from apps they
- * never thought to add still get through. The text never leaves the phone: only
- * the code itself does, sealed for each paired receiver.
+ * never thought to add still get through. The message text never leaves the
+ * phone. Only the code, the app’s name, and the notification title (usually
+ * the sender) are sent, sealed for each paired receiver, and the relay cannot
+ * read any of them.
  */
 class NotificationListener : NotificationListenerService() {
 
@@ -112,9 +114,8 @@ class NotificationListener : NotificationListenerService() {
         val key = "${sbn.packageName}:$code"
         if (recent.put(key, now) != null) return
 
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         debug("found a ${code.length}-character code in a notification from $from")
-        send(code, appLabel(sbn.packageName), title, sbn)
+        send(code, appLabel(sbn.packageName), sbn)
     }
 
     /**
@@ -178,7 +179,7 @@ class NotificationListener : NotificationListenerService() {
         debug("ignored a notification from $packageName: $reason")
     }
 
-    private fun send(code: String, app: String, from: String, sbn: StatusBarNotification) {
+    private fun send(code: String, app: String, sbn: StatusBarNotification) {
         val plaintext = JSONObject()
             .put("v", 1)
             .put("code", code)

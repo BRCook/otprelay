@@ -49,7 +49,7 @@ python ../tools/dev-source.py send 482913
 
 ## Where things are stored
 
-Settings and pairings live in `~/.config/otprelay/receiver.json` (`%APPDATA%\otprelay\receiver.json` on Windows), created readable only by you. **It holds one private key per pairing**: anyone who can read it can decrypt this computer's codes, so use full-disk encryption.
+Settings and pairings live in `~/.config/otprelay/receiver.json` (`%APPDATA%\otprelay\receiver.json` on Windows), created readable only by you. Keys are stored in the system keyring.
 
 Set `OTPRELAY_CONFIG_DIR` to use a different location, which is handy for testing.
 

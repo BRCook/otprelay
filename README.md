@@ -44,7 +44,7 @@ The full API and encryption scheme are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 ## Running the relay
 
-The relay speaks plain HTTP on port 8787 by default and can be used with a reverse proxy in front for TLS and the public hostname. It can also serve TLS itself, or run on plain HTTP inside a LAN (codes stay end-to-end encrypted either way).
+The relay speaks plain HTTP on port 8787 by default and can be used with a reverse proxy in front for TLS and the public hostname. It can also serve TLS itself, but both sides require HTTPS in any case.
 
 Requirements: Python 3.9 or newer and aiohttp.
 

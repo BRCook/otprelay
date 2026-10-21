@@ -131,13 +131,14 @@ class AppState(context: Context) {
             return
         }
         run(scope, "Paired with ${link.name}.") {
-            val id = relay.addReceiver(link.secret, link.name, link.platform)
+            val id = relay.addReceiver(Crypto.deriveClaim(link.secret))
             store.addReceiver(
                 Receiver(
                     id = id,
                     name = link.name,
                     platform = link.platform,
                     publicKey = link.publicKey,
+                    authKey = Crypto.deriveAuthKey(link.secret),
                     pairedAt = System.currentTimeMillis() / 1000,
                 )
             )
@@ -151,10 +152,11 @@ class AppState(context: Context) {
     }
 
     private fun rowsFromRelay(): List<ReceiverRow> {
-        val keys = store.receivers().associateBy { it.id }
+        val local = store.receivers().associateBy { it.id }
         return relay.listReceivers().map {
-            ReceiverRow(it.id, it.name, it.platform, it.online, it.claimed,
-                keys.containsKey(it.id))
+            val mine = local[it.id]
+            ReceiverRow(it.id, mine?.name ?: "Unknown computer", mine?.platform ?: "unknown",
+                it.online, it.claimed, mine != null)
         }
     }
 

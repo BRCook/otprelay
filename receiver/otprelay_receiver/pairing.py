@@ -6,7 +6,8 @@ import time
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from .config import Pairing, platform_name
-from .crypto import new_keypair, new_pairing_secret, pairing_uri
+from .crypto import derive_auth_key, derive_claim, new_keypair, \
+    new_pairing_secret, pairing_uri
 from .relay import Http
 
 log = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ class PairingSession(QObject):
         self.http = http
         self.private_key, public_key = new_keypair()
         self.secret = new_pairing_secret()
+        self.claim = derive_claim(self.secret)
         self.uri = pairing_uri(relay, public_key, self.secret, name, platform_name())
         self.deadline = time.time() + WINDOW
         self.in_flight = False
@@ -79,6 +81,7 @@ class PairingSession(QObject):
                     receiver_token=str(data["receiver_token"]),
                     relay=self.relay,
                     private_key=self.private_key,
+                    auth_key=derive_auth_key(self.secret),
                     source_name=str(data.get("source_name") or "Phone")[:64],
                     paired_at=int(time.time()))
             except (KeyError, TypeError, ValueError):
@@ -89,4 +92,4 @@ class PairingSession(QObject):
             self.paired.emit(pairing)
 
         self.http.call("POST", f"{self.relay}/api/pair/claim",
-                       {"pairing_secret": self.secret}, callback=done)
+                       {"pairing_secret": self.claim}, callback=done)

@@ -18,14 +18,14 @@ jobs:
     # anything older.
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
 
       - name: Install the AppImage builder
-        run: python -m pip install --upgrade pip appimage
+        run: python -m pip install --upgrade pip "appimage==4.0.1"
 
       - name: Build the AppImage
         working-directory: receiver
@@ -42,7 +42,7 @@ jobs:
           # and Python starts; the tray itself cannot be tested here.
           APPIMAGE_EXTRACT_AND_RUN=1 ./dist/*.AppImage --help || true
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: otprelay-receiver-appimage
           path: receiver/dist/*.AppImage
@@ -50,7 +50,7 @@ jobs:
 
       - name: Attach it to the release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: receiver/dist/*.AppImage
           generate_release_notes: true
@@ -65,9 +65,9 @@ jobs:
       KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           distribution: temurin
           java-version: "21"
@@ -110,7 +110,7 @@ jobs:
           cp "$built" "dist/otprelay-${version}.apk"
           echo "path=android/dist/otprelay-${version}.apk" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: otprelay-apk
           path: android/dist/*.apk
@@ -118,7 +118,7 @@ jobs:
 
       - name: Attach it to the release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: ${{ steps.apk.outputs.path }}
           generate_release_notes: true
