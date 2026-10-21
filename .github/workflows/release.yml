@@ -18,9 +18,9 @@ jobs:
     # anything older.
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -42,7 +42,7 @@ jobs:
           # and Python starts; the tray itself cannot be tested here.
           APPIMAGE_EXTRACT_AND_RUN=1 ./dist/*.AppImage --help || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: otprelay-receiver-appimage
           path: receiver/dist/*.AppImage
