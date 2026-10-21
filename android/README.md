@@ -24,19 +24,6 @@ Open this folder in Android Studio and let it sync, then **Run** to install a de
 ./gradlew test               # code detection and pairing tests, no device needed
 ```
 
-### Signing a release build
-
-Release builds are signed if `~/.keys/otprelay-signing.properties` exists:
-
-```properties
-storeFile=/home/you/.keys/otprelay-release.jks
-storePassword=...
-keyAlias=otprelay
-keyPassword=...
-```
-
-Create the keystore once with `keytool -genkeypair -v -keystore ~/.keys/otprelay-release.jks -alias otprelay -keyalg RSA -keysize 4096 -validity 10000`, then back it up and keep the password somewhere safe: updates must be signed with the same key or the phone treats them as a different app.
-
 ## Setting up a phone
 
 1. **Get an invite.** On the relay: `otprelay-admin invite yourname`.
