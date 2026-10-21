@@ -184,7 +184,6 @@ class NotificationListener : NotificationListenerService() {
             .put("v", 1)
             .put("code", code)
             .put("app", app)
-            .put("from", from)
             .put("ts", System.currentTimeMillis() / 1000)
             .toString()
             .toByteArray()
