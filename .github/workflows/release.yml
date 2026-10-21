@@ -45,14 +45,18 @@ jobs:
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: otprelay-receiver-appimage
-          path: receiver/dist/*.AppImage
+          path: |
+            receiver/dist/*.AppImage
+            receiver/dist/*.zsync
           if-no-files-found: error
 
       - name: Attach it to the release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          files: receiver/dist/*.AppImage
+          files: |
+            receiver/dist/*.AppImage
+            receiver/dist/*.zsync
           generate_release_notes: true
 
   apk:

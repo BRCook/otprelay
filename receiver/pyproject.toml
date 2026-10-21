@@ -26,6 +26,11 @@ entry_point = "otprelay-receiver"
 icon = "otprelay-receiver.png"
 desktop = "otprelay-receiver.desktop"
 python = "3.12"
+# Lets AppImageUpdate (and front-ends like Shelly or Gear Lever) fetch only the
+# changed blocks of a new release instead of the whole file. appimagetool also
+# writes a matching .zsync file, which the release workflow uploads.
+update_info = "gh-releases-zsync|BRCook|otprelay|latest|otprelay-receiver-*x86_64.AppImage.zsync"
+require_zsyncmake = true
 
 [tool.appimage.hooks]
 # PySide6 bundles Jinja templates named *.py, which are not valid Python and
