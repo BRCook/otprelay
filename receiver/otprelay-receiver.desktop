@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=otprelay receiver
+GenericName=One-time code receiver
+Comment=Copy one-time codes from your phone to this computer
+Exec=otprelay-receiver
+Icon=otprelay-receiver
+Terminal=false
+Categories=Utility;Security;
+Keywords=otp;2fa;mfa;code;clipboard;sms;
+StartupNotify=false

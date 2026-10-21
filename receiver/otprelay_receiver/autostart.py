@@ -9,6 +9,11 @@ APP_ID = "otprelay-receiver"
 
 
 def launch_command() -> list[str]:
+    # Inside an AppImage, sys.executable points into a temporary mount that is
+    # gone by the next login, so the AppImage file itself is the thing to run.
+    appimage = os.environ.get("APPIMAGE")
+    if appimage and Path(appimage).exists():
+        return [appimage]
     exe = Path(sys.executable)
     if sys.platform == "win32" and exe.name.lower() == "python.exe":
         exe = exe.with_name("pythonw.exe")  # no console window at login
@@ -58,7 +63,7 @@ def set_enabled(enabled: bool):
             "Name=otprelay receiver\n"
             "Comment=Copies one-time codes from your phones to the clipboard\n"
             f"Exec={command}\n"
-            "Icon=dialog-password\n"
+            "Icon=otprelay-receiver\n"
             "Terminal=false\n"
             "X-GNOME-Autostart-enabled=true\n",
             encoding="utf-8")

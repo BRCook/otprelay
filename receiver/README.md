@@ -15,6 +15,19 @@ Read the warning in the [main README](../README.md) before using this. Anyone wh
 
 Python 3.10 or newer, PySide6, PyNaCl, and qrcode. A system tray is required, which KDE Plasma, GNOME (with an extension), and Windows all provide.
 
+## Installing
+
+Download `otprelay-receiver-x86_64.AppImage` from the [releases page](https://github.com/BRCook/otprelay/releases), make it executable, and run it:
+
+```sh
+chmod +x otprelay-receiver-*.AppImage
+./otprelay-receiver-*.AppImage
+```
+
+It bundles Python and Qt, so nothing else needs installing. Keep the file somewhere permanent (`~/Applications` is a common choice) before turning on "Start automatically at login", since the autostart entry points at wherever the file sits.
+
+On KDE the clipboard goes through Klipper, which is already there. On other Wayland desktops install `wl-clipboard`, and on X11 install `xclip`.
+
 ## Development setup
 
 Dependencies are declared in `pyproject.toml`.
@@ -43,6 +56,16 @@ Set `OTPRELAY_CONFIG_DIR` to use a different location, which is handy for testin
 ## Clipboard support
 
 Wayland does not let an unfocused app set the clipboard, so the receiver asks Klipper over D-Bus on KDE, uses `wl-copy` on other Wayland desktops, and uses Qt's own clipboard on X11, Windows and macOS.
+
+## Building an AppImage
+
+```sh
+cd receiver
+python -m pip install appimage
+python -m appimage.ctl build        # writes dist/otprelay-receiver-x86_64.AppImage
+```
+
+The settings live in `[tool.appimage]` in `pyproject.toml`; everything else comes from `[project]`.
 
 ## Starting at login
 
