@@ -10,6 +10,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val appVersionName = (findProperty("versionName") as String?) ?: "0.1.0"
+val appVersionCode = ((findProperty("versionCode") as String?) ?: "1").toInt()
+
 android {
     namespace = "ca.brcook.otprelay"
     compileSdk {
@@ -20,8 +23,8 @@ android {
         applicationId = "ca.brcook.otprelay"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

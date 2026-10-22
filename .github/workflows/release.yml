@@ -27,6 +27,23 @@ jobs:
       - name: Install the AppImage builder
         run: python -m pip install --upgrade pip "appimage==4.0.1"
 
+      # The AppImage takes its version from the installed package, so the tag
+      # has to reach pyproject.toml before the build runs.
+      - name: Stamp the version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: receiver
+        run: |
+          python - "${GITHUB_REF_NAME#v}" <<'PY'
+          import pathlib, re, sys
+          path = pathlib.Path("pyproject.toml")
+          text, count = re.subn(
+              r'(?m)^version = ".*"$', f'version = "{sys.argv[1]}"', path.read_text(), count=1)
+          if count != 1:
+              raise SystemExit("no version line in pyproject.toml")
+          path.write_text(text)
+          PY
+          grep -m1 '^version' pyproject.toml
+
       - name: Build the AppImage
         working-directory: receiver
         env:
@@ -94,13 +111,33 @@ jobs:
           } > "$HOME/.keys/otprelay-signing.properties"
           chmod 600 "$HOME/.keys/otprelay-release.jks" "$HOME/.keys/otprelay-signing.properties"
 
+      - name: Work out the version
+        id: version
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*) name="${GITHUB_REF_NAME#v}" ;;
+            *)            name="0.0.0" ;;
+          esac
+          # versionCode must be an ever-increasing integer, so pack the three
+          # parts of the version into one: 1.2.3 becomes 10203.
+          major=$(echo "$name" | cut -d. -f1)
+          minor=$(echo "$name" | cut -d. -f2)
+          patch=$(echo "$name" | cut -d. -f3 | sed 's/[^0-9].*//')
+          code=$(( ${major:-0} * 10000 + ${minor:-0} * 100 + ${patch:-0} ))
+          [ "$code" -gt 0 ] || code=1
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
       - name: Run the tests
         working-directory: android
         run: ./gradlew --no-daemon test
 
       - name: Build the APK
         working-directory: android
-        run: ./gradlew --no-daemon assembleRelease
+        run: |
+          ./gradlew --no-daemon assembleRelease \
+            -PversionName="${{ steps.version.outputs.name }}" \
+            -PversionCode="${{ steps.version.outputs.code }}"
 
       - name: Name it after the tag
         id: apk
