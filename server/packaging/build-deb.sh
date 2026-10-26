@@ -29,7 +29,7 @@ sed 's#/opt/otprelay/server/otprelay.py#/usr/lib/otprelay/otprelay.py#' \
 chmod 0644 "$root/lib/systemd/system/otprelay.service"
 install -m 0644 "$server/packaging/systemd/otprelay.env.example" "$root/etc/default/otprelay"
 
-sed "s/@VERSION@/$version/" "$here/deb/control" > "$root/DEBIAN/control"
+sed "s/@VERSION@/$version/" "$here/deb/control" | sed -e '$a\' > "$root/DEBIAN/control"
 for script in postinst prerm postrm; do
     install -m 0755 "$here/deb/$script" "$root/DEBIAN/$script"
 done
