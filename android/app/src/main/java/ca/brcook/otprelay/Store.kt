@@ -72,7 +72,7 @@ class Store(context: Context) {
 
     /** Whether to also put the code on this phone's own clipboard. */
     var copyLocally: Boolean
-        get() = prefs.getBoolean(KEY_COPY_LOCAL, true)
+        get() = prefs.getBoolean(KEY_COPY_LOCAL, false)
         set(value) = prefs.edit().putBoolean(KEY_COPY_LOCAL, value).apply()
 
     /**

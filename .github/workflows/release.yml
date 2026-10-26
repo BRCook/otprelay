@@ -18,6 +18,8 @@ jobs:
     # built with, so building on the newest Ubuntu would refuse to start on
     # anything older.
     runs-on: ubuntu-22.04
+    env:
+      GPG_KEY_BASE64: ${{ secrets.APPIMAGE_GPG_KEY_BASE64 }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
@@ -51,6 +53,38 @@ jobs:
           # CI runners have no FUSE, so appimagetool unpacks itself instead.
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: python -m appimage.ctl build
+
+      # The builder leaves the AppDir, appimagetool and runtime in build/, so
+      # the AppImage can be packaged once more with a signature embedded.
+      # AppImageUpdate remembers the key from the first install and refuses
+      # later updates signed with a different one.
+      - name: Sign the AppImage
+        if: env.GPG_KEY_BASE64 != ''
+        working-directory: receiver
+        env:
+          GPG_PASSPHRASE: ${{ secrets.APPIMAGE_GPG_PASSPHRASE }}
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          export GNUPGHOME=$(mktemp -d)
+          printf '%s' "$GPG_KEY_BASE64" | base64 -d | gpg --batch --import
+          key=$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
+          # gpg needs the passphrase without a prompt: hand it over via the agent.
+          echo "allow-loopback-pinentry" > "$GNUPGHOME/gpg-agent.conf"
+          echo "pinentry-mode loopback" > "$GNUPGHOME/gpg.conf"
+          echo "$GPG_PASSPHRASE" > "$GNUPGHOME/pass"
+          update=$(python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["tool"]["appimage"]["update_info"])')
+          out=$(ls dist/*.AppImage)
+          rm -f "$out" "$out.zsync"
+          chmod +x build/appimagetool-x86_64.AppImage
+          build/appimagetool-x86_64.AppImage \
+            --runtime-file build/runtime-x86_64 \
+            --mksquashfs-opt -no-xattrs --mksquashfs-opt -no-duplicates \
+            --mksquashfs-opt -processors --mksquashfs-opt 1 \
+            --sign --sign-key "$key" \
+            --sign-args "--batch --pinentry-mode loopback --passphrase-file $GNUPGHOME/pass" \
+            -u "$update" build/AppDir "$out"
+          rm -rf "$GNUPGHOME"
+          ls -l dist/
 
       - name: Check that it starts
         working-directory: receiver

@@ -18,7 +18,9 @@ configure)
 
     if [ -d /run/systemd/system ]; then
         systemctl daemon-reload >/dev/null 2>&1 || true
-        systemctl enable --now otprelay.service >/dev/null 2>&1 || true
+        systemctl enable otprelay.service >/dev/null 2>&1 || true
+        echo "otprelay is installed and will start at boot. Edit /etc/default/otprelay first" >&2
+        echo "(TLS or a reverse proxy), then: systemctl start otprelay" >&2
     fi
     ;;
 esac

@@ -62,7 +62,7 @@ otprelay://pair?v=1&u=<relay>&k=<public key>&s=<secret>&n=<name>&p=<platform>
 
 The source must refuse the QR code if `u` does not match its own relay (after removing any trailing slash), and must check that `k` decodes to 32 bytes.
 
-## Derived values. 
+### Derived values
 
 `s` itself is never sent to the relay. Both sides derive, with
 HMAC-SHA256 keyed by the raw 32 bytes of `s`:
@@ -109,7 +109,7 @@ Response:
 
 Register a receiver after scanning its QR code.
 
-Request: `{"pairing_secret": "<s from QR>"}`
+Request: `{"pairing_secret": "<claim derived from s>"}`
 
 Response: `{"receiver_id": "..."}`
 
@@ -142,7 +142,7 @@ Response:
 
 The receiver polls this (every 2 seconds is reasonable) after showing its QR code.
 
-Request: `{"pairing_secret": "<s>"}`
+Request: `{"pairing_secret": "<claim derived from s>"}`
 
 Response: `{"receiver_id": "...", "receiver_token": "...", "source_name": "Galaxy S24"}`
 

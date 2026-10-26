@@ -10,11 +10,11 @@ readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.10"
 dependencies = [
-    "PySide6-Essentials>=6.5",
-    "PySide6-Addons>=6.5",  # provides QtWebSockets
-    "PyNaCl>=1.5",
-    "qrcode>=7.4",
-    "keyring>=25",
+    "PySide6-Essentials==6.12.0",
+    "PySide6-Addons==6.12.0", # provides QtWebSockets
+    "PyNaCl==1.6.2",
+    "qrcode==8.2",
+    "keyring==25.7.0",
 ]
 
 [project.scripts]

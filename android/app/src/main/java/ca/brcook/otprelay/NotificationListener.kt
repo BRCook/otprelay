@@ -27,11 +27,8 @@ import android.os.PersistableBundle
 /**
  * Watches notifications for one-time codes and forwards them encrypted.
  *
- * Every app is watched except those the user excludes, so codes from apps they
- * never thought to add still get through. The message text never leaves the
- * phone. Only the code, the app’s name, and the notification title (usually
- * the sender) are sent, sealed for each paired receiver, and the relay cannot
- * read any of them.
+ * Every app is watched except those the user excludes. The message text never leaves the
+ * phone. Only the code is sent.
  */
 class NotificationListener : NotificationListenerService() {
 

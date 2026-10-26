@@ -28,6 +28,15 @@ It bundles Python and Qt, so nothing else needs installing. Keep the file somewh
 
 On KDE the clipboard goes through Klipper, which is already there. On other Wayland desktops install `wl-clipboard`, and on X11 install `xclip`.
 
+### Updates and verification
+
+The AppImage checks GitHub for new releases through AppImageUpdate. Releases are signed with the key in `packaging/otprelay-signing.pub`; to verify a download by
+hand:
+```sh
+    gpg --import packaging/otprelay-signing.pub
+    ./otprelay-receiver-x86_64.AppImage --appimage-signature | gpg --verify - ./otprelay-receiver-x86_64.AppImage
+```
+
 ## Development setup
 
 Dependencies are declared in `pyproject.toml`.

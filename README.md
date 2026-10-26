@@ -39,8 +39,9 @@ The full API and encryption scheme are in [docs/PROTOCOL.md](docs/PROTOCOL.md).
 
 * Codes are encrypted on the source with libsodium sealed boxes, one copy per receiver.
 * A source trusts only keys it scanned itself. The relay can tell a source that a receiver was removed, but never that one was added, so a compromised relay cannot redirect codes to itself.
-* The relay database holds no secrets: tokens are stored as SHA-256 hashes.
 * There are no usernames or passwords. Sources join with single-use invites; receivers join by being scanned by a source.
+* Every message carries an HMAC keyed with a secret derived from the pairing QR code, which the relay never sees. A receiver rejects anything without a valid MAC, so neither the relay nor anyone who obtains a phone's relay token can inject codes.
+* The relay stores no device names or secrets: only token hashes, random IDs, and timestamps. Both apps keep names locally.
 
 ## Running the relay
 
@@ -48,7 +49,29 @@ The relay speaks plain HTTP on port 8787 by default and can be used with a rever
 
 Requirements: Python 3.9 or newer and aiohttp.
 
-### Alpine (OpenRC)
+### From a package
+
+Each release carries a `.deb` and an Alpine `.apk` on the [releases page](https://github.com/BRCook/otprelay/releases). Both install a package called `otprelay-server`, so installing, upgrading and removing go through the usual package manager.
+
+```sh
+# Alpine
+apk add --allow-untrusted otprelay-server-alpine-0.1.0.apk
+
+# Debian, Ubuntu and relatives
+apt install ./otprelay-server-debian-0.1.0.deb
+```
+
+The package creates the `otprelay` user, installs the service for that init system, puts the relay in `/usr/lib/otprelay`, and leaves settings in `/etc/conf.d/otprelay` (Alpine) or `/etc/default/otprelay` (Debian). Upgrading keeps both those settings and the database.
+
+Neither package starts the service, so you can set the listen address or TLS first. Then:
+
+```sh
+systemctl start otprelay              # Debian (already enabled at boot)
+rc-update add otprelay default        # Alpine
+rc-service otprelay start
+```
+
+### Alpine checkout (OpenRC)
 
 ```sh
 apk add python3 py3-aiohttp git
@@ -79,6 +102,10 @@ systemctl enable --now otprelay
 
 Logs: `journalctl -u otprelay`.
 
+### Package signing
+
+The `.deb` is not signed, and the Alpine `.apk` is signed with a key generated fresh for each build, so it must be installed with `apk add --allow-untrusted`. Both are protected only by TLS to GitHub Releases: download them from the release page **directly**, and check the file name matches the release.
+
 ### Configuration
 
 Set in `/etc/conf.d/otprelay` (Alpine) or `/etc/default/otprelay` (Debian):
@@ -101,10 +128,28 @@ Receivers send an application-level ping every 30 seconds, so a proxy that only 
 
 ### Updating
 
+From a package, install the new version the same way as the first; settings and the database are kept. From a checkout:
+
 ```sh
 cd /opt/otprelay && git pull
 rc-service otprelay restart    # Alpine
 systemctl restart otprelay     # Debian
+```
+
+### Removing
+
+Removing the package leaves `/var/lib/otprelay` alone, so the database survives a reinstall:
+
+```sh
+apk del otprelay-server             # Alpine; delete /var/lib/otprelay by hand
+apt purge otprelay-server           # Debian; purge also deletes the database
+```
+
+## Building the packages
+
+```sh
+server/packaging/build-deb.sh 0.1.0 dist     # needs dpkg-deb
+server/packaging/build-apk.sh 0.1.0 dist     # needs Alpine with alpine-sdk
 ```
 
 ## Administration
@@ -123,7 +168,7 @@ One relay can serve multiple users. Their phones (sources) redeem the invite, an
 
 ## Setting it up
 
-1. **Run a relay** (below) and put it behind HTTPS.
+1. **Run a relay** (above) and put it behind HTTPS.
 2. **Create an invite**: `otprelay-admin invite yourname`.
 3. **Set up the phone**: see [android/README.md](android/README.md). One step is easy to miss: Android hands apps a redacted copy of any notification that looks like it holds a code, so the app needs the `RECEIVE_SENSITIVE_NOTIFICATIONS` permission granted over ADB.
 4. **Set up each computer**: see [receiver/README.md](receiver/README.md), then scan its QR code with the phone.
