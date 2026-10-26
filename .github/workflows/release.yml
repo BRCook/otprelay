@@ -148,12 +148,12 @@ jobs:
           version="${GITHUB_REF_NAME}"
           case "$GITHUB_REF" in refs/tags/*) ;; *) version="dev-${GITHUB_SHA:0:7}" ;; esac
           mkdir -p dist
-          cp "$built" "dist/otprelay-${version}.apk"
-          echo "path=android/dist/otprelay-${version}.apk" >> "$GITHUB_OUTPUT"
+          cp "$built" "dist/otprelay-android-${version}.apk"
+          echo "path=android/dist/otprelay-android-${version}.apk" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: otprelay-apk
+          name: otprelay-android-apk
           path: android/dist/*.apk
           if-no-files-found: error
 
@@ -197,6 +197,13 @@ jobs:
             cp /home/builder/.abuild/*.rsa.pub /etc/apk/keys/
             su builder -c "server/packaging/build-apk.sh ${{ steps.version.outputs.value }} dist"
           '
+      - name: Set the Alpine package apart from the Android one
+        run: |
+          # Both formats use the .apk extension, so make the relay's obvious.
+          for built in dist/otprelay-*-r*.apk; do
+            mv "$built" "dist/otprelay-relay-${built#dist/otprelay-}"
+          done
+          ls dist/
 
       - name: Check the packages
         run: |
