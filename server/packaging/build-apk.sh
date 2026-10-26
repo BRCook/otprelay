@@ -31,7 +31,8 @@ command -v abuild >/dev/null || {
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/packaging/alpine" "$work/packaging/openrc"
-cp "$here/alpine/APKBUILD" "$here/alpine/otprelay-server."*install "$work/packaging/alpine/"cp "$here/openrc/otprelay" "$here/openrc/otprelay.confd" "$work/packaging/openrc/"
+cp "$here/alpine/APKBUILD" "$here/alpine/otprelay-server."*install "$work/packaging/alpine/"
+cp "$here/openrc/otprelay" "$here/openrc/otprelay.confd" "$work/packaging/openrc/"
 cp "$server/otprelay.py" "$server/otprelay-admin" "$work/"
 sed -i "s/^pkgver=.*/pkgver=$version/" "$work/packaging/alpine/APKBUILD"
 
