@@ -168,6 +168,9 @@ class PairingsWindow(QWidget):
         self.remove_button = QPushButton("Unpair")
         self.remove_button.setEnabled(False)
         self.remove_button.clicked.connect(self._remove_selected)
+        self.rename_button = QPushButton("Rename…")
+        self.rename_button.setEnabled(False)
+        self.rename_button.clicked.connect(self._rename_selected)
         close_button = QPushButton("Close")
         close_button.clicked.connect(self.close)
 
