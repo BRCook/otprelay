@@ -1,0 +1,10 @@
+Package: otprelay
+Version: @VERSION@
+Section: net
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.9), python3-aiohttp, adduser
+Maintainer: Benjamin R. Cook <BRCook@users.noreply.github.com>
+Homepage: https://github.com/BRCook/otprelay
+Description: End-to-end-encrypted relay for one-time codes
+ Routes one-time codes from a phone to the desktops it is paired with.

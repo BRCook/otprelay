@@ -163,3 +163,56 @@ jobs:
         with:
           files: ${{ steps.apk.outputs.path }}
           generate_release_notes: true
+
+  packages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+
+      - name: Work out the version
+        id: version
+        run: |
+          case "$GITHUB_REF" in
+            refs/tags/v*) version="${GITHUB_REF_NAME#v}" ;;
+            *)            version="0.0.0" ;;
+          esac
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build the .deb
+        run: server/packaging/build-deb.sh "${{ steps.version.outputs.value }}" dist
+
+      # abuild only exists on Alpine, so that half builds in a container. It
+      # refuses to run as root, hence the unprivileged user.
+      - name: Build the .apk
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src alpine:3.21 sh -c '
+            set -eu
+            apk add --no-cache alpine-sdk >/dev/null
+            adduser -D builder
+            addgroup builder abuild
+            chown -R builder /src
+            su builder -c "server/packaging/build-apk.sh ${{ steps.version.outputs.value }} dist"
+          '
+
+      - name: Check the packages
+        run: |
+          ls -lh dist/
+          dpkg-deb -I dist/*.deb
+          dpkg-deb -c dist/*.deb
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: otprelay-relay-packages
+          path: |
+            dist/*.deb
+            dist/*.apk
+          if-no-files-found: error
+
+      - name: Attach them to the release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          files: |
+            dist/*.deb
+            dist/*.apk
+          generate_release_notes: true

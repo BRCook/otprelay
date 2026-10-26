@@ -1,0 +1,4 @@
+#!/bin/sh
+# The database is deliberately left behind: removing it would throw away every
+# invite, phone and pairing. Delete /var/lib/otprelay by hand to be rid of it.
+exit 0

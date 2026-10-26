@@ -1,0 +1,5 @@
+#!/bin/sh
+# Runs before the files land, so the service user exists to own them.
+addgroup -S otprelay 2>/dev/null
+adduser -S -D -H -h /var/lib/otprelay -s /sbin/nologin -G otprelay -g otprelay otprelay 2>/dev/null
+exit 0

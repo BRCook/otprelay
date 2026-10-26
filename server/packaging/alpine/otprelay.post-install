@@ -1,0 +1,19 @@
+#!/bin/sh
+# The database lives here and is private to the service user.
+mkdir -p /var/lib/otprelay
+chown otprelay:otprelay /var/lib/otprelay
+chmod 700 /var/lib/otprelay
+
+cat <<'MESSAGE'
+*
+* otprelay is installed but not running. To start it at boot:
+*
+*   rc-update add otprelay default
+*   rc-service otprelay start
+*
+* Settings live in /etc/conf.d/otprelay. Create an invite with:
+*
+*   otprelay-admin invite yourname
+*
+MESSAGE
+exit 0

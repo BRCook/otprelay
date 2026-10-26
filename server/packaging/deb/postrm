@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+remove)
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload >/dev/null 2>&1 || true
+    fi
+    ;;
+purge)
+    # Purging takes the database with it: every invite, phone and pairing.
+    rm -rf /var/lib/otprelay
+    if getent passwd otprelay >/dev/null; then
+        deluser --system otprelay >/dev/null 2>&1 || true
+    fi
+    if getent group otprelay >/dev/null; then
+        delgroup --system otprelay >/dev/null 2>&1 || true
+    fi
+    if [ -d /run/systemd/system ]; then
+        systemctl daemon-reload >/dev/null 2>&1 || true
+    fi
+    ;;
+esac

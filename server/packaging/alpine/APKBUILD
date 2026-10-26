@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Contributor: Benjamin R. Cook <BRCook@users.noreply.github.com>
+# Maintainer: Benjamin R. Cook <BRCook@users.noreply.github.com>
+pkgname=otprelay
+pkgver=0.0.0
+pkgrel=0
+pkgdesc="End-to-end-encrypted relay for one-time codes"
+url="https://github.com/BRCook/otprelay"
+arch="noarch"
+license="AGPL-3.0-or-later"
+depends="python3 py3-aiohttp"
+install="$pkgname.pre-install $pkgname.post-install $pkgname.post-deinstall"
+source=""
+options="!check"
+
+package() {
+    # build-apk.sh arranges this layout: sources two levels up from here.
+    local src="$startdir/../.."
+
+    install -Dm644 "$src/otprelay.py" "$pkgdir/usr/lib/otprelay/otprelay.py"
+    install -Dm755 "$src/otprelay-admin" "$pkgdir/usr/lib/otprelay/otprelay-admin"
+    install -d "$pkgdir/usr/bin"
+    ln -sf ../lib/otprelay/otprelay-admin "$pkgdir/usr/bin/otprelay-admin"
+
+    install -d "$pkgdir/etc/init.d"
+    sed 's#\${OTPRELAY_DIR:-/opt/otprelay}/server/otprelay.py#/usr/lib/otprelay/otprelay.py#' \
+        "$src/packaging/openrc/otprelay" > "$pkgdir/etc/init.d/otprelay"
+    chmod 0755 "$pkgdir/etc/init.d/otprelay"
+
+    install -Dm644 "$src/packaging/openrc/otprelay.confd" "$pkgdir/etc/conf.d/otprelay"
+}
