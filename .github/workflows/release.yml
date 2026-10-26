@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Builds the desktop receiver as an AppImage. Pushing a tag like v0.2.0 also
-# attaches it to the matching GitHub release.
+# Builds every artefact a release carries: the desktop receiver as an AppImage,
+# the phone app as an APK, and the relay as Debian and Alpine packages. Pushing
+# a tag like v0.2.0 also attaches them to the matching GitHub release.
 name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: [ "v*" ]
   workflow_dispatch:
 
 permissions:
@@ -76,7 +77,7 @@ jobs:
             receiver/dist/*.zsync
           generate_release_notes: true
 
-  apk:
+  android:
     runs-on: ubuntu-latest
     # The secrets context cannot be used in an `if`, so they are lifted into
     # the environment here and the steps test those instead.
@@ -86,7 +87,7 @@ jobs:
       KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
@@ -116,7 +117,7 @@ jobs:
         run: |
           case "$GITHUB_REF" in
             refs/tags/v*) name="${GITHUB_REF_NAME#v}" ;;
-            *)            name="0.0.0" ;;
+            *)            name="0.0.0-dev-${GITHUB_SHA:0:7}" ;;
           esac
           # versionCode must be an ever-increasing integer, so pack the three
           # parts of the version into one: 1.2.3 becomes 10203.
@@ -132,28 +133,24 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon test
 
+      # Gradle always writes app-release.apk, so the built file is copied out
+      # under the name the release should carry.
       - name: Build the APK
+        id: apk
         working-directory: android
         run: |
           ./gradlew --no-daemon assembleRelease \
             -PversionName="${{ steps.version.outputs.name }}" \
             -PversionCode="${{ steps.version.outputs.code }}"
-
-      - name: Name it after the tag
-        id: apk
-        working-directory: android
-        run: |
           built=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
           [ -n "$built" ] || { echo "no APK was produced" >&2; exit 1; }
-          version="${GITHUB_REF_NAME}"
-          case "$GITHUB_REF" in refs/tags/*) ;; *) version="dev-${GITHUB_SHA:0:7}" ;; esac
           mkdir -p dist
-          cp "$built" "dist/otprelay-android-${version}.apk"
-          echo "path=android/dist/otprelay-android-${version}.apk" >> "$GITHUB_OUTPUT"
+          cp "$built" "dist/otprelay-android-${{ steps.version.outputs.name }}.apk"
+          echo "path=android/dist/otprelay-android-${{ steps.version.outputs.name }}.apk" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: otprelay-android-apk
+          name: otprelay-android
           path: android/dist/*.apk
           if-no-files-found: error
 
@@ -164,10 +161,10 @@ jobs:
           files: ${{ steps.apk.outputs.path }}
           generate_release_notes: true
 
-  packages:
+  server:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Work out the version
         id: version
@@ -178,12 +175,12 @@ jobs:
           esac
           echo "value=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Build the .deb
+      - name: Build the Debian package
         run: server/packaging/build-deb.sh "${{ steps.version.outputs.value }}" dist
 
       # abuild only exists on Alpine, so that half builds in a container. It
       # refuses to run as root, hence the unprivileged user.
-      - name: Build the .apk
+      - name: Build the Alpine package
         run: |
           docker run --rm -v "$PWD:/src" -w /src alpine:3.21 sh -c '
             set -eu
@@ -197,13 +194,6 @@ jobs:
             cp /home/builder/.abuild/*.rsa.pub /etc/apk/keys/
             su builder -c "server/packaging/build-apk.sh ${{ steps.version.outputs.value }} dist"
           '
-      - name: Set the Alpine package apart from the Android one
-        run: |
-          # Both formats use the .apk extension, so make the relay's obvious.
-          for built in dist/otprelay-*-r*.apk; do
-            mv "$built" "dist/otprelay-relay-${built#dist/otprelay-}"
-          done
-          ls dist/
 
       - name: Check the packages
         run: |
@@ -213,10 +203,14 @@ jobs:
 
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: otprelay-relay-packages
-          path: |
-            dist/*.deb
-            dist/*.apk
+          name: otprelay-server-debian
+          path: dist/*.deb
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: otprelay-server-alpine
+          path: dist/*.apk
           if-no-files-found: error
 
       - name: Attach them to the release
