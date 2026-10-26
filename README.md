@@ -55,10 +55,10 @@ Each release carries a `.deb` and an Alpine `.apk` on the [releases page](https:
 
 ```sh
 # Alpine
-apk add --allow-untrusted otprelay-server-alpine-0.1.0.apk
+apk add --allow-untrusted otprelay-server-alpine-*.apk
 
 # Debian, Ubuntu and relatives
-apt install ./otprelay-server-debian-0.1.0.deb
+apt install ./otprelay-server-debian-*.deb
 ```
 
 The package creates the `otprelay` user, installs the service for that init system, puts the relay in `/usr/lib/otprelay`, and leaves settings in `/etc/conf.d/otprelay` (Alpine) or `/etc/default/otprelay` (Debian). Upgrading keeps both those settings and the database.
@@ -148,8 +148,8 @@ apt purge otprelay-server           # Debian; purge also deletes the database
 ## Building the packages
 
 ```sh
-server/packaging/build-deb.sh 0.1.0 dist     # needs dpkg-deb
-server/packaging/build-apk.sh 0.1.0 dist     # needs Alpine with alpine-sdk
+server/packaging/build-deb.sh <ver> dist     # needs dpkg-deb
+server/packaging/build-apk.sh <ver> dist     # needs Alpine with alpine-sdk
 ```
 
 ## Administration
