@@ -212,6 +212,14 @@ private fun HomeScreen(state: AppState, scope: CoroutineScope) {
                 }
                 Switch(checked = state.markAsRead, onCheckedChange = state::updateMarkAsRead)
             }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("Copy to this phone")
+                Switch(checked = state.copyLocally, onCheckedChange = state::updateCopyLocally)
+            }
             if (state.lastEvent.isNotEmpty()) {
                 Text(state.lastEvent, style = MaterialTheme.typography.bodySmall)
             }

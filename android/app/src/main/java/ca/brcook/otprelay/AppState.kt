@@ -52,6 +52,8 @@ class AppState(context: Context) {
         private set
     var lastEvent by mutableStateOf("")
         private set
+    var copyLocally by mutableStateOf(store.copyLocally)
+        private set
 
     /** Bumped whenever the screen comes back, so the list refreshes itself. */
     var resumeTick by mutableStateOf(0)
@@ -77,6 +79,11 @@ class AppState(context: Context) {
     fun updateMarkAsRead(enabled: Boolean) {
         store.markAsRead = enabled
         markAsRead = enabled
+    }
+
+    fun updateCopyLocally(enabled: Boolean) {
+        store.copyLocally = enabled
+        copyLocally = enabled
     }
 
     fun addKeyword(word: String) {

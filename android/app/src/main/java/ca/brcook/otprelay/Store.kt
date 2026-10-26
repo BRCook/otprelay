@@ -70,6 +70,11 @@ class Store(context: Context) {
         get() = prefs.getBoolean(KEY_FORWARDING, true)
         set(value) = prefs.edit().putBoolean(KEY_FORWARDING, value).apply()
 
+    /** Whether to also put the code on this phone's own clipboard. */
+    var copyLocally: Boolean
+        get() = prefs.getBoolean(KEY_COPY_LOCAL, true)
+        set(value) = prefs.edit().putBoolean(KEY_COPY_LOCAL, value).apply()
+
     /**
      * The words that mark a message as being about a code. Editable, so an
      * unusual bank or another language needs no new build. Stored sorted for a
@@ -162,6 +167,7 @@ class Store(context: Context) {
         const val KEY_MARK_READ = "mark_as_read"
         const val KEY_LAST_EVENT = "last_event"
         const val KEY_LAST_EVENT_AT = "last_event_at"
+        const val KEY_COPY_LOCAL = "copy_locally"
 
         /** This app's own notifications are never worth scanning. */
         val DEFAULT_EXCLUDED = setOf("ca.brcook.otprelay", "android", "com.android.systemui")

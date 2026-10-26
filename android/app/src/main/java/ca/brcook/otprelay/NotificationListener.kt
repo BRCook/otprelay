@@ -19,6 +19,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import android.content.ClipData
+import android.content.ClipDescription
+import android.content.ClipboardManager
+import android.os.PersistableBundle
 
 /**
  * Watches notifications for one-time codes and forwards them encrypted.
@@ -115,6 +119,7 @@ class NotificationListener : NotificationListenerService() {
         if (recent.put(key, now) != null) return
 
         debug("found a ${code.length}-character code in a notification from $from")
+        copyLocally(code)
         send(code, appLabel(sbn.packageName), sbn)
     }
 
@@ -250,6 +255,29 @@ class NotificationListener : NotificationListenerService() {
             }
         } catch (e: Exception) {
             Log.w(TAG, "could not mark the message read", e)
+        }
+    }
+
+        /**
+         * Put the code on this phone's clipboard as well.
+         *
+         * Marked sensitive, so Android 13 and newer keep it out of the clipboard
+         * preview and out of anything that syncs clipboards between devices.
+         */
+    private fun copyLocally(code: String) {
+        if (!store.copyLocally) return
+        try {
+            val clipboard = getSystemService(ClipboardManager::class.java) ?: return
+            val clip = ClipData.newPlainText("One-time code", code)
+            clip.description.extras = PersistableBundle().apply {
+                putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true)
+                // Same flag under its older name, for Android 12 and earlier.
+                putBoolean("android.content.extra.IS_SENSITIVE", true)
+            }
+            clipboard.setPrimaryClip(clip)
+            debug("copied the code to this phone's clipboard")
+        } catch (e: Exception) {
+            Log.w(TAG, "could not copy to this phone's clipboard", e)
         }
     }
 
