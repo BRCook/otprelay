@@ -30,12 +30,11 @@ On KDE the clipboard goes through Klipper, which is already there. On other Wayl
 
 ### Updates and verification
 
-The AppImage checks GitHub for new releases through AppImageUpdate. Releases are signed with the key in `packaging/otprelay-signing.pub`; to verify a download by
-hand:
+The AppImage checks GitHub for new releases through AppImageUpdate. Releases are signed with the key in `packaging/otprelay-signing.pub`; to verify a download by hand (needs only Python 3 and gpg):
 ```sh
-    gpg --import packaging/otprelay-signing.pub
-    ./otprelay-receiver-x86_64.AppImage --appimage-signature | gpg --verify - ./otprelay-receiver-x86_64.AppImage
+python tools/verify-appimage.py otprelay-receiver-x86_64.AppImage --key receiver/packaging/otprelay-signing.pub
 ```
+It prints `Good signature from "otprelay releases …"` followed by `OK` when the file was signed with the project key. The "not certified" warning from gpg is expected: it only means the key is not in your personal web of trust.
 
 ## Development setup
 
