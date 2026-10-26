@@ -187,7 +187,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/src" -w /src alpine:3.21 sh -c '
             set -eu
-            apk add --no-cache alpine-sdk >/dev/null
+            apk add --no-cache alpine-sdk python3 py3-aiohttp >/dev/null
             adduser -D builder
             addgroup builder abuild
             chown -R builder /src
