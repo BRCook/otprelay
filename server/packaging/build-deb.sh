@@ -37,6 +37,6 @@ done
 echo /etc/default/otprelay > "$root/DEBIAN/conffiles"
 
 mkdir -p "$outdir"
-package="$outdir/otprelay_${version}_all.deb"
+package="$outdir/otprelay-server-debian-${version}.deb"
 dpkg-deb --root-owner-group --build "$root" "$package" >/dev/null
 echo "$package"

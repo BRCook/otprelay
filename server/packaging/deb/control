@@ -1,4 +1,4 @@
-Package: otprelay
+Package: otprelay-server
 Version: @VERSION@
 Section: net
 Priority: optional

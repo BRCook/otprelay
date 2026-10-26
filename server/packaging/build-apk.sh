@@ -31,8 +31,7 @@ command -v abuild >/dev/null || {
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/packaging/alpine" "$work/packaging/openrc"
-cp "$here/alpine/APKBUILD" "$here/alpine/otprelay."*install "$work/packaging/alpine/"
-cp "$here/openrc/otprelay" "$here/openrc/otprelay.confd" "$work/packaging/openrc/"
+cp "$here/alpine/APKBUILD" "$here/alpine/otprelay-server."*install "$work/packaging/alpine/"cp "$here/openrc/otprelay" "$here/openrc/otprelay.confd" "$work/packaging/openrc/"
 cp "$server/otprelay.py" "$server/otprelay-admin" "$work/"
 sed -i "s/^pkgver=.*/pkgver=$version/" "$work/packaging/alpine/APKBUILD"
 
@@ -40,11 +39,8 @@ mkdir -p "$outdir"
 destination=$(readlink -f "$outdir")
 ( cd "$work/packaging/alpine" && abuild -F checksum && abuild -F -P "$destination" )
 
-# abuild files packages under <dest>/<repository>/<arch>; move the result up.
-built=$(find "$destination" -name "otprelay-$version-r*.apk" | head -1)
+built=$(find "$destination" -name "otprelay-server-$version-r*.apk" | head -1)
 [ -n "$built" ] || { echo "build-apk.sh: no package was produced" >&2; exit 1; }
-if [ "$(dirname "$built")" != "$destination" ]; then
-    mv "$built" "$destination/"
-    built="$destination/$(basename "$built")"
-fi
-echo "$built"
+final="$destination/otprelay-server-alpine-$version.apk"
+mv "$built" "$final"
+echo "$final"

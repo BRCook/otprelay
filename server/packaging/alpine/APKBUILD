@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Contributor: Benjamin R. Cook <BRCook@users.noreply.github.com>
 # Maintainer: Benjamin R. Cook <BRCook@users.noreply.github.com>
-pkgname=otprelay
+pkgname=otprelay-server
 pkgver=0.0.0
 pkgrel=0
 pkgdesc="End-to-end-encrypted relay for one-time codes"
