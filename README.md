@@ -21,7 +21,7 @@ Forward one-time codes from your Android phone to your desktop, end-to-end encry
  source -> relay -> receiver -> clipboard
 ```
 
-* **Source** (Android app, Kotlin): detects codes in notifications, encrypts them separately for each paired receiver, and sends them to the relay.
+* **Source** (Android app, Kotlin): detects codes in notifications, copies them to the clipboard, encrypts them separately for each paired receiver, and sends them to the relay.
 * **Relay** (Python): routes ciphertext. It stores only hashes of tokens, and forgets undelivered messages after two minutes.
 * **Receiver** (desktop tray app for Linux, later Windows): decrypts codes, copies them to the clipboard, and shows a notification. Pairs by showing a QR code for the source to scan. See [receiver/README.md](receiver/README.md).
 

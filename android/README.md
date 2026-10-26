@@ -7,6 +7,7 @@ Read the warning in the [main README](../README.md) before using this. Forwardin
 ## What it does
 
 * Watches notifications from every app except the ones you exclude.
+* Copies detected codes to the clipboard.
 * Encrypts each code, with the app name and sender, per paired receiver.
 * Sends the encrypted code to the relay to be forwarded to the receiver.
 
@@ -44,6 +45,7 @@ Repeat step 5 for each computer.
 
 * **Forward codes** pauses sending without unpairing anything.
 * **Mark messages read** acts on a message once its code has been forwarded, and only if the send succeeded. Where the notifying app offers its own mark-as-read action (Samsung Messages does), that action is used, so the message is marked read in the app. Otherwise the notification is dismissed from the shade and the app's own read state is left alone. Off by default.
+* **Copy to this phone** copies the detected code to the phone's clipboard in addition to forwarding codes, if selected.
 * **Unpair** removes a computer. It stops receiving immediately, since the phone deletes its key.
 * **Detection words** edits the list of words that mark a message as being about a code. Spaces and hyphens are interchangeable, so `one time` also matches `one-time` and `onetime`, and a word is matched literally, so punctuation in it is safe. Emptying the list switches detection off entirely.
 * **Forget this relay** clears everything: the token, every paired computer, and the relay address. A new invite is needed afterwards.

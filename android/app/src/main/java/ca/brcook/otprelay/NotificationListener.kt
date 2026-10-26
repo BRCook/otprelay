@@ -80,7 +80,6 @@ class NotificationListener : NotificationListenerService() {
         if (!store.forwarding) return skip(from, "forwarding is paused")
         if (!store.isRegistered) return skip(from, "not registered with a relay")
         if (from in store.excludedPackages) return skip(from, "app is excluded")
-        if (store.receivers().isEmpty()) return skip(from, "no receivers paired")
 
         // Android replays notifications that are already showing when the listener
         // binds, so anything posted a while ago is ignored rather than resent.
@@ -185,6 +184,11 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun send(code: String, app: String, sbn: StatusBarNotification) {
+        if (store.receivers().isEmpty()) {
+            store.lastEvent = if (store.copyLocally) "Copied a code to this phone"
+            else "Found a code but no computer is paired"
+            return
+        }
         val plaintext = JSONObject()
             .put("v", 1)
             .put("code", code)
@@ -202,6 +206,8 @@ class NotificationListener : NotificationListenerService() {
                     debug("sent to ${result.sent.size}, queued for ${result.queued.size}")
                     store.lastEvent = if (reached > 0) {
                         "Sent a code to $reached computer${if (reached == 1) "" else "s"}"
+                    } else if (store.copyLocally) {
+                        "Copied a code to this phone"
                     } else {
                         "Found a code but no computer is paired"
                     }
