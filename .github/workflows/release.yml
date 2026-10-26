@@ -70,8 +70,8 @@ jobs:
           key=$(gpg --batch --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
           # gpg needs the passphrase without a prompt: hand it over via the agent.
           echo "allow-loopback-pinentry" > "$GNUPGHOME/gpg-agent.conf"
-          echo "pinentry-mode loopback" > "$GNUPGHOME/gpg.conf"
           echo "$GPG_PASSPHRASE" > "$GNUPGHOME/pass"
+          printf 'batch\npinentry-mode loopback\npassphrase-file %s\n' "$GNUPGHOME/pass" > "$GNUPGHOME/gpg.conf"
           update=$(python -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["tool"]["appimage"]["update_info"])')
           out=$(ls dist/*.AppImage)
           rm -f "$out" "$out.zsync"
@@ -81,7 +81,6 @@ jobs:
             --mksquashfs-opt -no-xattrs --mksquashfs-opt -no-duplicates \
             --mksquashfs-opt -processors --mksquashfs-opt 1 \
             --sign --sign-key "$key" \
-            --sign-args "--batch --pinentry-mode loopback --passphrase-file $GNUPGHOME/pass" \
             -u "$update" build/AppDir "$out"
           rm -rf "$GNUPGHOME"
           ls -l dist/
